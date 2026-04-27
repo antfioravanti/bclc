@@ -1,0 +1,7 @@
+^LICENSE\.md$
+^.*\.Rproj$
+^\.Rproj\.user$
+^setup\.R$
+^\.RDataTmp$
+^\.RData$
+^\.Rhistory$

@@ -33,20 +33,92 @@ check_bisymmetric <- function(A, tol = 1e-10) {
   check_symmetric(A, tol) && check_centrosymmetric(A, tol)
 }
 
-check_toeplitz <- function(A, tol = 1e-10) {
-  n <- nrow(A)
-  if (n <= 1) return(TRUE)
-  for (k in 0:(n - 1)) {
-    d <- A[cbind(1:(n - k), (1 + k):n)]
-    if (max(abs(d - d[1])) > tol) return(FALSE)
+check_toeplitz <- function(A, tol = 1e-8) {
+  nr <- nrow(A)
+  nc <- ncol(A)
+  
+  for (i in seq_len(nr - 1)) {
+    for (j in seq_len(nc - 1)) {
+      if (abs(A[i, j] - A[i + 1, j + 1]) > tol) {
+        return(FALSE)
+      }
+    }
   }
-  for (k in 1:(n - 1)) {
-    d <- A[cbind((1 + k):n, 1:(n - k))]
-    if (max(abs(d - d[1])) > tol) return(FALSE)
-  }
+  
   TRUE
 }
 
+
+check_bttb <- function(A, block_size, tol = 1e-8) {
+  n <- nrow(A)
+  
+  if (!is.matrix(A)) return(FALSE)
+  if (n != ncol(A)) return(FALSE)
+  if (n %% block_size != 0) return(FALSE)
+  
+  nb <- n / block_size
+  
+  get_block <- function(i, j) {
+    rows <- ((i - 1) * block_size + 1):(i * block_size)
+    cols <- ((j - 1) * block_size + 1):(j * block_size)
+    A[rows, cols, drop = FALSE]
+  }
+  
+  # 1. Check each block is Toeplitz
+  for (i in seq_len(nb)) {
+    for (j in seq_len(nb)) {
+      if (!check_toeplitz(get_block(i, j), tol = tol)) {
+        return(FALSE)
+      }
+    }
+  }
+  
+  # 2. Check block Toeplitz structure
+  for (i in seq_len(nb - 1)) {
+    for (j in seq_len(nb - 1)) {
+      B1 <- get_block(i, j)
+      B2 <- get_block(i + 1, j + 1)
+      
+      if (max(abs(B1 - B2)) > tol) {
+        return(FALSE)
+      }
+    }
+  }
+  
+  TRUE
+}
+check_block_toeplitz <- function(A, block_size, tol = 1e-8) {
+  n <- nrow(A)
+  
+  # Check square matrix
+  if (n != ncol(A)) return(FALSE)
+  
+  # Check divisibility
+  if (n %% block_size != 0) return(FALSE)
+  
+  nb <- n / block_size  # number of blocks per dimension
+  
+  # Function to extract block (i,j)
+  get_block <- function(i, j) {
+    rows <- ((i - 1) * block_size + 1):(i * block_size)
+    cols <- ((j - 1) * block_size + 1):(j * block_size)
+    A[rows, cols, drop = FALSE]
+  }
+  
+  # Check block Toeplitz property
+  for (i in 1:(nb - 1)) {
+    for (j in 1:(nb - 1)) {
+      B1 <- get_block(i, j)
+      B2 <- get_block(i + 1, j + 1)
+      
+      if (max(abs(B1 - B2)) > tol) {
+        return(FALSE)
+      }
+    }
+  }
+  
+  return(TRUE)
+}
 check_hankel <- function(A, tol = 1e-10) {
   check_toeplitz(A %*% Jmat(nrow(A)), tol)
 }
@@ -253,7 +325,7 @@ check_B_equals_JAJ <- function(A, B, tol = 1e-10) {
 # =============================================================================
 
 #' Run all relevant checks on a single matrix and return a named list of results.
-full_matrix_report <- function(A, label = "A", tol = 1e-10) {
+full_matrix_report <- function(A, label = "A", block_size=2, tol = 1e-10) {
   n <- nrow(A)
   list(
     label              = label,
@@ -262,6 +334,8 @@ full_matrix_report <- function(A, label = "A", tol = 1e-10) {
     centrosymmetric    = check_centrosymmetric(A, tol),
     bisymmetric        = check_bisymmetric(A, tol),
     toeplitz           = check_toeplitz(A, tol),
+    block_toeplitz     = check_block_toeplitz(A, block_size = block_size, tol = tol),
+    bttb                = check_bttb(A, block_size = block_size, tol = tol),
     nonnegative        = check_nonnegative(A, tol),
     zero_row_sum       = check_zero_row_sum(A, tol),
     row_stochastic     = check_row_stochastic(A, tol),

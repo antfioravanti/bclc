@@ -1,2 +1,4 @@
 scripts/
 .Rproj.user
+src/true_cov_precompute.cpp
+src/true_cov_precompute.o

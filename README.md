@@ -48,7 +48,7 @@ The result holds the data matrix and the parameters used to generate it:
 - `sim$Sigma` — the true N × N covariance used to generate `X`
 - `sim$params` — the parameters above
 
-**2) Bias-corrected estimate**, truncating lags to `{-m,...,m}^2` with `m = 3`:
+**2) Bias-corrected estimate**, truncating lags to `{-m,...,m}^2` with `m = 3` estimating with bias correction:
 
 ```r
 fit <- bias_corrected_estimator(sim$X, m = 3)

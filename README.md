@@ -84,40 +84,6 @@ Sigma_psd <- psd_project(res$Sigma_hat_m)
 is_psd(Sigma_psd)      # TRUE
 ```
 
-## Does the correction actually help here? (no simulation needed)
-
-Because `W*_m` and the analytical MSE are both available in closed form, you can ask
-whether the correction reduces MSE for a given grid and parameter set before touching
-any data. The ratio `tr(MSE_corrected) / tr(MSE_standard)` is **< 1 when the
-correction helps**:
-
-```r
-mse_ratio(
-  n1 = 20, n2 = 20, m = 3,
-  beta = 0, lambdas = c(4, 4), alphas = c(1, 1), sigma = 1
-)
-# e.g. 0.78  ->  ~22% lower total MSE than the naive estimator
-
-# Full breakdown (per-lag MSE matrices for both estimators):
-cmp <- compute_mse_comparison(
-  n1 = 20, n2 = 20, m = 3,
-  beta = 0, lambdas = c(4, 4), alphas = c(1, 1), sigma = 1
-)
-cmp$scalar_MSE_standard      # tr(MSE) of the naive estimator
-cmp$scalar_MSE_corrected     # tr(MSE) of the corrected estimator
-```
-
-## Choosing the truncation level m
-
-`W*_m` must be invertible for the correction to exist. `check_invertibility()` maps
-out the safe range of `m` by reporting the reciprocal condition number at each level:
-
-```r
-m1 <- build_count_matrices(20)
-m2 <- build_count_matrices(20)
-check_invertibility(m1, m2)   # data.frame: m, rcond, singular
-```
-
 ## Notation and conventions
 
 - **Lag matrix.** For a grid of size `n` per axis there are `L = 2n - 1` lags,
@@ -129,18 +95,8 @@ check_invertibility(m1, m2)   # data.frame: m, rcond, singular
 - **Normalisation.** `Nh_normalize = TRUE` (the default) uses the `N_h`
   normalisation throughout — keep it consistent between the estimator and any MSE
   comparison.
-
-## The covariance model
-
-All analytical results assume the **modified exponential** autocovariance:
-
-```
-C(h1, h2) = sigma^2 * exp( -( |h1|^alpha1 / lambda1
-                            + |h2|^alpha2 / lambda2
-                            + beta * |h1 - h2| / lambda1 ) )
-```
-
-with `beta = 0` giving a separable model and `beta > 0` a non-separable one.
+- **Separable Covariance.** `beta = 0` giving a separable model and `beta > 0` 
+a non-separable one.
 
 ## Main entry points
 
@@ -149,8 +105,6 @@ with `beta = 0` giving a separable model and `beta > 0` a non-separable one.
 | `simulate_lattice_process()` | Simulate one Gaussian realisation on the lattice. |
 | `bias_corrected_estimator()` | Main estimator: data → naive and corrected autocovariances. |
 | `reshape_Sigma_hat_m()` | Corrected lag vector → lag matrix + N×N covariance. |
-| `mse_ratio()` / `compute_mse_comparison()` | Analytical MSE comparison (no simulation). |
-| `check_invertibility()` | Safe range of the truncation parameter `m`. |
 | `build_weight_matrices()` | Build `W_m` / `W*_m` directly from `n1, n2, m`. |
 
 ## License

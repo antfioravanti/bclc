@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{Jmat}
 \alias{Jmat}
-\title{Build the \( n \times n \) reversal matrix \( \mathbf{J} \) (anti-identity).}
+\title{Build the \eqn{n \times n} reversal matrix \eqn{\mathbf{J}} (anti-identity).}
 \usage{
 Jmat(n)
 }
@@ -10,9 +10,9 @@ Jmat(n)
 \item{n}{Integer. Dimension of the matrix.}
 }
 \value{
-An \( n \times n \) numeric matrix representing the reversal operator.
+An \eqn{n \times n} numeric matrix representing the reversal operator.
 }
 \description{
 The matrix has ones on the anti-diagonal and zeros elsewhere.
-Multiplication \( \mathbf{J} \\%*\\% \underline{x} \) reverses the entries of a vector \( \underline{x} \).
+Multiplication \eqn{\mathbf{J} x} reverses the entries of a vector \eqn{x}.
 }

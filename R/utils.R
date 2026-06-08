@@ -6,13 +6,13 @@
 
 #------------------------------------------------------------------------------
 # REVERSAL MATRIX
-#' Build the \( n \times n \) reversal matrix \( \mathbf{J} \) (anti-identity).
+#' Build the \eqn{n \times n} reversal matrix \eqn{\mathbf{J}} (anti-identity).
 #'
 #' The matrix has ones on the anti-diagonal and zeros elsewhere.
-#' Multiplication \( \mathbf{J} \%*\% \underline{x} \) reverses the entries of a vector \( \underline{x} \).
+#' Multiplication \eqn{\mathbf{J} x} reverses the entries of a vector \eqn{x}.
 #'
 #' @param n Integer. Dimension of the matrix.
-#' @return An \( n \times n \) numeric matrix representing the reversal operator.
+#' @return An \eqn{n \times n} numeric matrix representing the reversal operator.
 Jmat <- function(n) {
   diag(n)[, n:1, drop = FALSE]
 }

@@ -4,7 +4,7 @@
 \alias{full_matrix_report}
 \title{Run all relevant checks on a single matrix and return a named list of results.}
 \usage{
-full_matrix_report(A, label = "A", tol = 1e-10)
+full_matrix_report(A, label = "A", block_size = 2, tol = 1e-10)
 }
 \description{
 Run all relevant checks on a single matrix and return a named list of results.

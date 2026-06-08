@@ -10,9 +10,8 @@ geometry (`n1, n2, m`) — not on the data or the unknown parameters:
 C*_m = (W*_m)^{-1} Chat_m
 ```
 
-The package also ships analytical (true-parameter) MSE formulas under the modified
-exponential covariance model, so the correction can be evaluated without Monte-Carlo
-simulation.
+The weight matrix is derived under the modified exponential covariance model, and the
+correction itself is fully non-parametric at estimation time.
 
 ## Installation
 

@@ -1,7 +1,7 @@
 #ifndef LATTICEBIASCORRECTION_COVARIANCE_H
 #define LATTICEBIASCORRECTION_COVARIANCE_H
 
-// ============================================================================
+//-----------------------------------------------------------------------------
 // covariance.h
 // Core autocovariance function for the modified exponential model.
 // Defined inline so that any .cpp file can #include this header and call
@@ -17,7 +17,7 @@
 //   alpha1, alpha2 = smoothness parameters (positive)
 //   lambda1, lambda2 = scale parameters (positive)
 //   beta = separability parameter (beta=0: separable; beta>0: non-separable)
-// ============================================================================
+//-----------------------------------------------------------------------------
 
 #include <cmath>
 

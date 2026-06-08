@@ -1,13 +1,13 @@
-# =============================================================================
+#------------------------------------------------------------------------------
 # Author: Antonio Fioravanti
 # Bias-corrected sample covariance estimator on a 2D rectangular lattice.
-# =============================================================================
+#------------------------------------------------------------------------------
 
 # files <- list.files("R", pattern = "\\.R$", full.names = TRUE)
 # lapply(files, source)
 
-# -----------------------------------------------------------------------------
-# BUILD WEIGHT MATRIX W_n 
+#------------------------------------------------------------------------------
+# BUILD WEIGHT MATRIX W_n
 #' Build the full and normalised weight matrices W_n and W*_n from the
 #' one-dimensional count matrices for each spatial dimension.
 #'
@@ -35,8 +35,8 @@ build_W <- function(mat1, mat2) {
   list(W = W, W_star = W_star)
 }
 
-# -----------------------------------------------------------------------------
-# Helper: extracts the the central (2m+1) block of an L x L matrix.
+#------------------------------------------------------------------------------
+# Helper: extracts the central (2m+1) block of an L x L matrix.
 # central_range <- function(L, m) {
 #   centre <- (L + 1L) %/% 2L   # alternatie to (ceiling(L/2)-m):(ceiling(L/2)+m)
 #   (centre - m):(centre + m)
@@ -120,6 +120,3 @@ check_invertibility <- function(mat1, mat2, m_max = NULL,
 
   return(results)
 }
-
-# bias_corrected_estimator lives in src/estimators.cpp
-

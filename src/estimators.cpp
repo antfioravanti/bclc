@@ -1,4 +1,4 @@
-// ============================================================================
+//-----------------------------------------------------------------------------
 // Author: Antonio Fioravanti
 // Empirical (sample) estimators computed from an observed n1 x n2 data matrix.
 // Includes the standard autocovariance,
@@ -7,7 +7,7 @@
 // and the weight/selection matrices for the bias-corrected estimator.
 //
 // Convention: h1 = vertical lag (rows), h2 = horizontal lag (columns).
-// ============================================================================
+//-----------------------------------------------------------------------------
 
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
@@ -17,8 +17,9 @@
 using namespace Rcpp;
 
 
-// ----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // NAIVE SAMPLE COVARIANCE ESTIMATOR
+//-----------------------------------------------------------------------------
 // [[Rcpp::export]]
 double naive_sample_cov(NumericMatrix X, NumericVector hvec,
                         bool Nh_normalize = true) {
@@ -67,6 +68,7 @@ double naive_sample_cov(NumericMatrix X, NumericVector hvec,
 }
 //-----------------------------------------------------------------------------
 // FULL EMPIRICAL GAMMA (n1-1) x (n2-1) MATRIX OF SAMPLE COVARIANCES
+//-----------------------------------------------------------------------------
 
 // Build the L1 x L2 matrix Chat(h1, h2) for all lags from data X.
 // [[Rcpp::export]]
@@ -98,7 +100,7 @@ NumericMatrix build_Gamma_naive(NumericMatrix X,
 
   return Chat;
 }
-// -----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // NAIVE SIGMA_HAT: N x N covariance matrix from the empirical lag matrix.
 //
 // Computes Gamma_hat internally from X, then fills
@@ -133,7 +135,7 @@ NumericMatrix build_Sigma_naive(NumericMatrix X, bool Nh_normalize = true) {
   return Sigma_hat;
 }
 
-// -----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // RESHAPE CORRECTED ESTIMATOR VECTOR INTO LAG MATRIX AND COVARIANCE MATRIX
 //
 // Takes Chat_star_m (vec(Gamma_hat_corr_m), length (2m+1)^2, column-major in
@@ -193,6 +195,7 @@ List reshape_Sigma_hat_m(NumericVector Chat_star_m, int m, int n1, int n2) {
 
 //-----------------------------------------------------------------------------
 // CRESSIE HAWKINS SEMIVARIOGRAM ESTIMATOR
+//-----------------------------------------------------------------------------
 
 // [[Rcpp::export]]
 double cressiehawkins_semivariogram(NumericMatrix X, NumericVector hvec,
@@ -236,7 +239,9 @@ double cressiehawkins_semivariogram(NumericMatrix X, NumericVector hvec,
   return 0.5 * fourth_power / correction;
 }
 
-// --- Cressie-Hawkins robust covariance via C(h) = C(0) - gamma(h) -----------
+//-----------------------------------------------------------------------------
+// Cressie-Hawkins robust covariance via C(h) = C(0) - gamma(h)
+//-----------------------------------------------------------------------------
 
 // Compute C_CH(h) = Chat(0,0) - gamma_CH(h).
 // [[Rcpp::export]]
@@ -256,15 +261,9 @@ double cressiehawkins_cov(NumericMatrix X, NumericVector hvec,
 }
 
 
-// =============================================================================
+//-----------------------------------------------------------------------------
 // WEIGHT / SELECTION MATRICES FOR THE BIAS-CORRECTED ESTIMATOR
-//
-// Replaces build_Pm(), build_Sm(), build_W_m() from bias_correction.R.
-//
-// Key optimisation: since P_m is a pure selection matrix (one 1 per row),
-//   P %*% A %*% t(P)  ==  A[central_rows, central_rows]
-// so we never form P explicitly and avoid all matrix multiplications.
-// =============================================================================
+//-----------------------------------------------------------------------------
 
 // Internal helper: 0-based central indices for lag dimension of size L, half-width m.
 static arma::uvec central_idx(int L, int m) {
@@ -272,8 +271,9 @@ static arma::uvec central_idx(int L, int m) {
   return arma::regspace<arma::uvec>(center - m, center + m);
 }
 
-// -----------------------------------------------------------------------------
-// build_Pm_cpp
+//-----------------------------------------------------------------------------
+// P_m: (2m+1) x L selection matrix for lags in {-m,...,m} out of
+// {-(n_k-1),...,(n_k-1)}
 //   Returns the (2m+1) x L selection matrix P_m.
 //   Exported mainly for inspection; not needed internally.
 // [[Rcpp::export]]
@@ -286,8 +286,9 @@ arma::mat build_Pm(int L, int m) {
   return P;
 }
 
-// -----------------------------------------------------------------------------
-// build_Sm_cpp
+//-----------------------------------------------------------------------------
+// S_m: (2m+1)^2 x (L1*L2) selection matrix for lags in {-m,...,m}^2 out of
+// {-(n1-1),...,(n1-1)} x {-(n2-1),...,(n2-1)}
 //   Returns the (2m+1)^2 x (L1*L2) selection matrix S_m = kron(P2, P1).
 //   In practice, prefer slice_indices() to avoid materialising this matrix.
 // [[Rcpp::export]]
@@ -297,8 +298,8 @@ arma::mat build_Sm(int L1, int L2, int m) {
   return arma::kron(P2, P1);
 }
 
-// -----------------------------------------------------------------------------
-// build_W_m_cpp
+//-----------------------------------------------------------------------------
+// W_m and W*_m builders for the bias-corrected estimator
 //   Builds W_m and W*_m directly from the count-matrix lists returned by
 //   build_count_matrices().  Uses index slicing instead of P %*% A %*% t(P).
 // [[Rcpp::export]]
@@ -321,7 +322,7 @@ List build_W_m(List mat1, List mat2, int m) {
   arma::mat D2n = as<arma::mat>(mat2["D_norm"]);
   int L2        = as<int>(mat2["L"]);
 
-  // Central index ranges (replaces P %*% A %*% t(P) with a submatrix slice)
+  // Central index ranges
   arma::uvec idx1 = central_idx(L1, m);
   arma::uvec idx2 = central_idx(L2, m);
 
@@ -346,16 +347,9 @@ List build_W_m(List mat1, List mat2, int m) {
   );
 }
 
-// -----------------------------------------------------------------------------
-// bias_corrected_estimator_cpp
-//   Full bias-corrected estimator in C++.  Optimisations over the R version:
-//     (1) W_m built via index slicing (no P matrix, no matrix multiplications)
-//     (2) Chat_m extracted via submatrix slice of Gamma_hat (no S_m matrix)
-//     (3) arma::solve(W_star_m, Chat_m) — no explicit matrix inverse
-//
-//   mat1, mat2: lists returned by build_count_matrices() called from R.
-//   (build_count_matrices lives in counting.cpp — a separate DLL — so it
-//    cannot be called directly here; pass the lists in from R instead.)
+//-----------------------------------------------------------------------------
+// Bias-corrected estimator builder - MAIN FUNCTION
+//   Full bias-corrected estimator
 // [[Rcpp::export]]
 List bias_corrected_estimator(NumericMatrix X, int m,
                                   bool Nh_normalize = true) {

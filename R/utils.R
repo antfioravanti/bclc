@@ -1,7 +1,7 @@
-# =============================================================================
+#------------------------------------------------------------------------------
 # Author: Antonio Fioravanti
 # Basic utility functions for working with 2D lattice data
-# =============================================================================
+#------------------------------------------------------------------------------
 
 
 #------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ Jmat <- function(n) {
 }
 
 
-# -----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # POSITIVE SEMI DEFINITE CHECKER FOR A MATRIX
 #' Check Whether a Matrix Is Positive Semi-Definite
 #'
@@ -30,7 +30,7 @@ Jmat <- function(n) {
 #'
 #' @return A logical scalar.
 #' @export
-# -----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # NEAREST PSD PROJECTION
 #' Project a symmetric matrix to the nearest positive semi-definite matrix
 #' (Frobenius-optimal). Floors all negative eigenvalues to zero.
@@ -44,7 +44,7 @@ psd_project <- function(M) {
   ed$vectors %*% (lam * t(ed$vectors))     # avoids diag(lam) allocation
 }
 
-# -----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # POSITIVE SEMI DEFINITE CHECKER FOR A MATRIX
 is_psd <- function(M, tol = 1e-8) {
   if (!isSymmetric(M, tol = tol)) return(FALSE)
@@ -52,7 +52,7 @@ is_psd <- function(M, tol = 1e-8) {
   all(ev >= -tol)
 }
 
-# -----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # MATRIX TO DATA FRAME CONVERSION
 #' Convert a matrix with dimnames "h1=..." / "h2=..." to a long data frame.
 #' @param mat  Matrix with named rows and columns.

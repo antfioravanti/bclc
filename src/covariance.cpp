@@ -1,17 +1,20 @@
-// ============================================================================
+//-----------------------------------------------------------------------------
 // Author: Antonio Fioravanti
 // True autocovariance model for the modified exponential.
 // Provides R-callable functions to evaluate C(h) at a single lag, build the
 // full L1 x L2 matrix of true autocovariances, build the covariance matrix
 // on a grid.
-// ============================================================================
+//-----------------------------------------------------------------------------
 
 #include <Rcpp.h>
 #include "covariance.h"
 using namespace Rcpp;
+
+//-----------------------------------------------------------------------------
+// Evaluate true C(h) at a single lag
 //-----------------------------------------------------------------------------
 
-// Function for R 
+// Function for R
 // [[Rcpp::export]]
 double eval_true_cov(NumericVector hvec,
                         double beta,
@@ -37,8 +40,9 @@ double eval_true_cov(NumericVector hvec,
                   sigma);
 }
 
-// ----------------------------------------------------------------------------
-//  Full covariance matrix on a lattice grid
+//-----------------------------------------------------------------------------
+// Full covariance matrix on a lattice grid
+//-----------------------------------------------------------------------------
 
 // Builds the N x N covariance matrix Sigma for the grid locations in the grid.
 // Parameters:
@@ -75,9 +79,9 @@ NumericMatrix ModifiedExponentialCovariance(
 }
 
 
-// ----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Lag indexed matrix Gamma of true autocovariances
-
+//-----------------------------------------------------------------------------
 
 // [[Rcpp::export]]
 NumericMatrix build_true_Gamma(NumericVector nvec,

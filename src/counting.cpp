@@ -1,17 +1,19 @@
-// ============================================================================
+//-----------------------------------------------------------------------------
 // Author: Antonio Fioravanti
 // Code to build the counting factors A, B, D and the
 // counting matrices used to construct the weight matrix W*_n.
 //
 // Purely combinatorial — no dependence on the covariance model.
-// ============================================================================
+//-----------------------------------------------------------------------------
 
 #include "counting.h"
 #include <algorithm>
 #include <cmath>
 
 
-// --- Scalar counting factors A, B, D ----------------------------------------
+//-----------------------------------------------------------------------------
+// Scalar counting factors A, B, D
+//-----------------------------------------------------------------------------
 
 // Count of (i, t) pairs producing lag r in the A-term).
 // [[Rcpp::export]]
@@ -35,7 +37,9 @@ int D_count(int n, int r) {
 }
 
 
-// --- Full counting matrices and their normalised versions --------------------
+//-----------------------------------------------------------------------------
+// Full counting matrices and their normalised versions
+//-----------------------------------------------------------------------------
 
 // Build L x L matrices A, B, D and their normalised versions A*, B*, D*
 // for one spatial dimension of size n_k.

@@ -1,4 +1,4 @@
-# =============================================================================
+#------------------------------------------------------------------------------
 # mse.R
 # R-level wrappers and utilities for the analytical (true-parameter) MSE
 # computations implemented in true_cov_precompute.cpp.
@@ -8,10 +8,11 @@
 #   - A unified MSE computation pipeline for the bias-corrected estimator
 #   - Scalar MSE (trace) extraction
 #   - Comparison helpers between standard and compact formulas
-# =============================================================================
+#------------------------------------------------------------------------------
 
 
-# --- MSE of the bias-corrected estimator C*_m ---------------------------------
+#------------------------------------------------------------------------------
+# MSE of the bias-corrected estimator C*_m
 
 #' Compute the MSE matrix of the bias-corrected estimator C*_m.
 #'
@@ -84,7 +85,8 @@ compute_mse_comparison <- function(n1, n2, m,
 }
 
 
-# --- Scalar MSE extraction ----------------------------------------------------
+#------------------------------------------------------------------------------
+# Scalar MSE extraction
 
 #' Extract the scalar (trace) MSE from an MSE matrix.
 #' Equivalent to sum of diagonal = sum of individual MSE(Chat(h)) over all h.
@@ -93,7 +95,8 @@ scalar_mse <- function(MSE_matrix) {
 }
 
 
-# --- MSE ratio for a single (n, m) combination --------------------------------
+#------------------------------------------------------------------------------
+# MSE ratio for a single (n, m) combination
 
 #' Compute the ratio tr(MSE_corrected) / tr(MSE_standard).
 #' Values < 1 indicate the bias-corrected estimator is better.
@@ -107,7 +110,8 @@ mse_ratio <- function(n1, n2, m, beta, lambdas, alphas, sigma,
 }
 
 
-# --- Verify compact vs 16-term formula ----------------------------------------
+#------------------------------------------------------------------------------
+# Verify compact vs 16-term formula
 
 #' Check that the compact (mu-free) and 16-term formulas produce the same
 #' Omega matrix, for a given set of parameters. Returns the max absolute

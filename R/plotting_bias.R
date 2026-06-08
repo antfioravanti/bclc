@@ -1,8 +1,18 @@
+#------------------------------------------------------------------------------
+# Author: Antonio Fioravanti
+# Result heatmaps and line plots over a summary_df keyed by (N, lambda, m, h1, h2).
+#------------------------------------------------------------------------------
+
 # Needed packages:
 library(dplyr)
 library(ggplot2)
 library(scales)
 library(viridisLite)
+
+
+#------------------------------------------------------------------------------
+# SHARED HELPERS AND PALETTES
+#------------------------------------------------------------------------------
 
 # Helper to make an "N" tag for filenames
 .n_tag <- function(N_vals) {
@@ -22,9 +32,9 @@ palette_colors <- c(
 # Create palette function
 my_palette <- gradient_n_pal(palette_colors, values = color_vals)
 
-#-----------------------------
+#------------------------------------------------------------------------------
 # 1) Largest m with MSEReduced
-#-----------------------------
+#------------------------------------------------------------------------------
 plot_max_m_reduced <- function(summary_df,
                                lambda_filter,
                                title_bool = TRUE,          
@@ -97,9 +107,9 @@ plot_max_m_reduced <- function(summary_df,
   return(p)
 }
 
-#-------------------------------------------------------------
+#------------------------------------------------------------------------------
 # 2) Best m = argmin(MSEChatCorr) among rows with MSEReduced=1
-#-------------------------------------------------------------
+#------------------------------------------------------------------------------
 plot_best_m_min_MSE <- function(summary_df,
                                 lambda_filter,
                                 title_bool = TRUE,          # <— added
@@ -177,9 +187,9 @@ plot_best_m_min_MSE <- function(summary_df,
 }
 
 
-#-------------------------------------------------------------
+#------------------------------------------------------------------------------
 # 2) Best m = argmin(MSEChatCorr) among rows with MSEReduced=1 and MSEZred=0
-#-------------------------------------------------------------
+#------------------------------------------------------------------------------
 # plot_best_m_min_MSE_flags <- function(summary_df,
 #                                       lambda_filter,
 #                                       title_bool = TRUE,
@@ -313,9 +323,9 @@ plot_best_m_min_MSE <- function(summary_df,
 #   if (interactive()) print(p)
 #   invisible(list(plot = p, file = out_path))
 # }
-#-------------------------------------------------------------
+#------------------------------------------------------------------------------
 # 4) Bias vs Lag Norm for different m values
-#-------------------------------------------------------------
+#------------------------------------------------------------------------------
 plot_bias_vs_norm <- function(summary_df,
                               lambda_filter,
                               N_filter,
@@ -462,7 +472,9 @@ plot_bias_vs_norm <- function(summary_df,
   invisible(list(plot = p, file = out_path, 
                  data = list(corrected = df_corrected, benchmark = df_benchmark)))
 }
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# MSE vs lag norm across m values
+#------------------------------------------------------------------------------
 plot_mse_vs_norm <- function(summary_df,
                              lambda_filter,
                              N_filter,
@@ -600,7 +612,9 @@ plot_mse_vs_norm <- function(summary_df,
 }
 
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Best m heatmap with reduction / zero-estimator flags (generic metric)
+#------------------------------------------------------------------------------
 plot_best_m_min_MSE_flags_general <- function(summary_df,
                                       lambda_filter,
                                       metric = "MSE",           # "MSE", "bias", "Var"
@@ -761,7 +775,9 @@ plot_best_m_min_MSE_flags_general <- function(summary_df,
   invisible(list(plot = p, file = out_path))
 }
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Metric vs lag norm across m values (generic metric)
+#------------------------------------------------------------------------------
 plot_bias_vs_norm_general <- function(summary_df,
                                       lambda_filter,
                                       N_filter,
@@ -1126,7 +1142,9 @@ plot_metric_vs_norm_grid <- function(summary_df,
   ))
 }
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Publication-grade metric vs lag norm (faceted by lambda)
+#------------------------------------------------------------------------------
 plot_metric_vs_norm_publication <- function(
     summary_df,
     N_filter,
@@ -1481,6 +1499,9 @@ plot_metric_vs_norm_publication <- function(
   ))
 }
 
+#------------------------------------------------------------------------------
+# MSE ratio heatmap grid (corrected / naive, faceted by lambda)
+#------------------------------------------------------------------------------
 plot_mse_ratio_heatmap_grid <- function(
     summary_df,
     N_filter,
@@ -1687,7 +1708,9 @@ plot_mse_ratio_heatmap_grid <- function(
 }
 
 
-# UPDATED VERSION OF THE BEST HEATMAP m
+#------------------------------------------------------------------------------
+# Best m heatmap with axis thinning and zero-estimator flags
+#------------------------------------------------------------------------------
 plot_best_m_heatmap <- function(summary_df,
                                 lambda_filter,
                                 N_filter,

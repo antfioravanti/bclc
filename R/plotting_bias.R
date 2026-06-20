@@ -1134,7 +1134,7 @@ plot_metric_vs_norm_grid <- function(summary_df,
                   dpi = dpi, bg = "white")
   
   if (interactive()) print(p)
-  
+
   invisible(list(
     plot = p, 
     file = out_path,
@@ -1168,6 +1168,8 @@ plot_metric_vs_norm_publication <- function(
     use_bw = FALSE,  # Black & white friendly with shapes
     show_title = FALSE,  # Often not needed in papers
     legend_position = "right",
+    facet_ncol = 2,  # Number of facet columns; set to length(lambda_values) (e.g. 4) for a single row
+    legend_nrow = NULL,  # Rows for a bottom legend; NULL = auto. With many m's, keep small (e.g. 2) so it doesn't overflow a 1-row layout
     palette_option = "viridis",  # viridis palette: "viridis", "plasma", "magma", "inferno", "cividis"
     CH_clip_factor = 1.5  # For MSE: drop CH points exceeding this factor times the naive value
 ) {
@@ -1404,7 +1406,7 @@ plot_metric_vs_norm_publication <- function(
     # Points
     geom_point(size = point_size) +
     # Facets with parsed labels (for Greek lambda)
-    facet_wrap(~ lambda_label, ncol = 2, scales = "free_y",
+    facet_wrap(~ lambda_label, ncol = facet_ncol, scales = "free_y",
                labeller = label_parsed) +
     # Scales
     scale_color_manual(values = colors, name = "Estimator") +
@@ -1458,10 +1460,19 @@ plot_metric_vs_norm_publication <- function(
   
   # Adjust legend layout based on position
   if (legend_position == "bottom") {
+    # A single row overflows when many m-levels are shown (e.g. all m plus
+    # Naïve/CH on a 4-panel-wide layout). Wrap the legend over several rows so
+    # it stays within the figure width. Aim for ~ (#facets + 1) entries per row.
+    if (!is.null(legend_nrow)) {
+      n_rows <- legend_nrow
+    } else {
+      per_row <- facet_ncol + 1
+      n_rows <- max(1, ceiling(n_estimators / per_row))
+    }
     p <- p + guides(
-      color = guide_legend(nrow = 1, byrow = TRUE),
-      linetype = guide_legend(nrow = 1, byrow = TRUE),
-      shape = guide_legend(nrow = 1, byrow = TRUE)
+      color = guide_legend(nrow = n_rows, byrow = TRUE),
+      linetype = guide_legend(nrow = n_rows, byrow = TRUE),
+      shape = guide_legend(nrow = n_rows, byrow = TRUE)
     )
   } else if (legend_position == "right") {
     p <- p + guides(
@@ -1489,9 +1500,11 @@ plot_metric_vs_norm_publication <- function(
   out_path_png <- file.path(out_dir, filename)
   
   ggsave(out_path_png, plot = p, width = width, height = height, dpi = dpi, bg = "white")
-  
+
   message("Saved: ", out_path_png)
-  
+
+  if (interactive()) print(p)
+
   invisible(list(
     plot = p,
     png_file = out_path_png,
@@ -1613,7 +1626,7 @@ plot_mse_ratio_heatmap_grid <- function(
   if (is.null(filename)) {
     m_tag <- if (best_m_only) "bestm" else paste0("m", m_filter)
     norm_tag <- if (normalization == "N") "_N" else "_Nh"
-    filename <- sprintf("mse_ratio_heatmap_grid_%s%s_N%d.pdf", m_tag, norm_tag, N_filter)
+    filename <- sprintf("mse_ratio_heatmap_grid_%s%s_N%d.png", m_tag, norm_tag, N_filter)
   }
   
   # Create plot
@@ -1692,19 +1705,16 @@ plot_mse_ratio_heatmap_grid <- function(
     p <- p + ggplot2::coord_fixed()
   }
   
-  # Save
-  out_path_pdf <- file.path(out_dir, filename)
+  # Save (PNG only -- this project never produces PDF plots)
   out_path_png <- file.path(out_dir, sub("\\.pdf$", ".png", filename))
-  
-  ggplot2::ggsave(out_path_pdf, plot = p, width = width, height = height, device = cairo_pdf)
+
   ggplot2::ggsave(out_path_png, plot = p, width = width, height = height, dpi = dpi, bg = "white")
-  
-  message("Saved: ", out_path_pdf)
+
   message("Saved: ", out_path_png)
-  
+
   if (interactive()) print(p)
-  
-  invisible(list(plot = p, pdf_file = out_path_pdf, png_file = out_path_png, data = df_plot))
+
+  invisible(list(plot = p, png_file = out_path_png, data = df_plot))
 }
 
 

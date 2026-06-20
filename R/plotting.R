@@ -110,16 +110,13 @@ plot_matrix = function(X,
   
   if (!is.null(out_dir) && !is.null(filename)) {
     if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-    file_path <- file.path(out_dir, paste0(filename, ".", file_type))
-    
-    if (file_type == "png") {
-      png(file_path, width = width, height = height, units = "in", res = dpi)
-    } else if (file_type == "pdf") {
-      pdf(file_path, width = width, height = height)
-    } else {
-      stop("file_type must be 'png' or 'pdf'")
+    # This project only ever produces PNG plots.
+    if (file_type != "png") {
+      stop("file_type must be 'png' (this project does not produce PDF plots)")
     }
-    
+    file_path <- file.path(out_dir, paste0(filename, ".png"))
+    png(file_path, width = width, height = height, units = "in", res = dpi)
+
     do_plot()
     dev.off()
   }

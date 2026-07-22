@@ -16,7 +16,6 @@
 
 using namespace Rcpp;
 
-
 //-----------------------------------------------------------------------------
 // NAIVE SAMPLE COVARIANCE ESTIMATOR
 //-----------------------------------------------------------------------------
@@ -70,7 +69,7 @@ double naive_sample_cov(NumericMatrix X, NumericVector hvec,
 // FULL EMPIRICAL GAMMA (n1-1) x (n2-1) MATRIX OF SAMPLE COVARIANCES
 //-----------------------------------------------------------------------------
 
-// Build the L1 x L2 matrix Chat(h1, h2) for all lags from data X.
+// Build the L1 x L2 matrix Gamma_hat(h1, h2) for all lags from data X.
 // [[Rcpp::export]]
 NumericMatrix build_Gamma_naive(NumericMatrix X,
                                 bool Nh_normalize = true) {
@@ -80,14 +79,14 @@ NumericMatrix build_Gamma_naive(NumericMatrix X,
   int L1 = 2 * n1 - 1;
   int L2 = 2 * n2 - 1;
 
-  NumericMatrix Chat(L1, L2);
+  NumericMatrix Gamma_hat(L1, L2);
 
   for (int i = 0; i < L1; ++i) {
     int lag1 = i - (n1 - 1);
     for (int j = 0; j < L2; ++j) {
       int lag2 = j - (n2 - 1);
       NumericVector hvec = NumericVector::create(lag1, lag2);
-      Chat(i, j) = naive_sample_cov(X, hvec, Nh_normalize);
+      Gamma_hat(i, j) = naive_sample_cov(X, hvec, Nh_normalize);
     }
   }
 
@@ -96,18 +95,14 @@ NumericMatrix build_Gamma_naive(NumericMatrix X,
     rownames[i] = "h1=" + std::to_string(i - (n1 - 1));
   for (int j = 0; j < L2; ++j)
     colnames[j] = "h2=" + std::to_string(j - (n2 - 1));
-  Chat.attr("dimnames") = List::create(rownames, colnames);
+  Gamma_hat.attr("dimnames") = List::create(rownames, colnames);
 
-  return Chat;
+  return Gamma_hat;
 }
 //-----------------------------------------------------------------------------
 // NAIVE SIGMA_HAT: N x N covariance matrix from the empirical lag matrix.
-//
-// Computes Gamma_hat internally from X, then fills
-// Sigma_hat[s,t] = Gamma_hat(s1-t1, s2-t2) for all pairs of spatial
-// locations indexed in column-major order.
-// No truncation is applied — all lags are used.
-//
+// Build the N x N variance covariance matrix Sigma_hat
+
 // [[Rcpp::export]]
 NumericMatrix build_Sigma_naive(NumericMatrix X, bool Nh_normalize = true) {
 
@@ -136,38 +131,185 @@ NumericMatrix build_Sigma_naive(NumericMatrix X, bool Nh_normalize = true) {
 }
 
 //-----------------------------------------------------------------------------
-// RESHAPE CORRECTED ESTIMATOR VECTOR INTO LAG MATRIX AND COVARIANCE MATRIX
-//
-// Takes Chat_star_m (vec(Gamma_hat_corr_m), length (2m+1)^2, column-major in
-// lag space) and produces:
-//   Gamma_hat_corr_m : (2m+1) x (2m+1) lag-indexed matrix (rows=h1, cols=h2)
-//   Sigma_hat_m      : n1*n2 x n1*n2 plug-in field covariance matrix where
-//                        Sigma_hat_m[s,t] = Chat_star_m(s1-t1, s2-t2)
-//                      with spatial locations in column-major order.
-// [[Rcpp::export]]
-List reshape_Sigma_hat_m(NumericVector Chat_star_m, int m, int n1, int n2) {
+// LAG VECTOR TO LAG MATRIX CONVERSION
+//-----------------------------------------------------------------------------
 
-  int L_m = 2 * m + 1;
+static NumericMatrix lagvec_to_matrix(NumericVector Chat_star_m,
+                                       int m1, int m2) {
 
-  if (Chat_star_m.size() != L_m * L_m)
-    stop("Chat_star_m must have length (2m+1)^2");
+  int M1 = 2 * m1 + 1;   // number of h1 (dim-1) lags
+  int M2 = 2 * m2 + 1;   // number of h2 (dim-2) lags
 
-  // --- (1) Lag matrix: reshape Chat_star_m column-major into (2m+1) x (2m+1) ---
-  NumericMatrix Gamma_hat_corr_m(L_m, L_m);
-  for (int j = 0; j < L_m; ++j)
-    for (int i = 0; i < L_m; ++i)
-      Gamma_hat_corr_m(i, j) = Chat_star_m[j * L_m + i];
+  if (Chat_star_m.size() != M1 * M2)
+    stop("Chat_star_m must have length (2*m1+1)*(2*m2+1)");
 
-  CharacterVector rown(L_m), coln(L_m);
-  for (int k = 0; k < L_m; ++k) {
-    rown[k] = "h1=" + std::to_string(k - m);
-    coln[k] = "h2=" + std::to_string(k - m);
-  }
+  NumericMatrix Gamma_hat_corr_m(M1, M2);
+  for (int j = 0; j < M2; ++j)
+    for (int i = 0; i < M1; ++i)
+      Gamma_hat_corr_m(i, j) = Chat_star_m[j * M1 + i];
+
+  CharacterVector rown(M1), coln(M2);
+  for (int i = 0; i < M1; ++i)
+    rown[i] = "h1=" + std::to_string(i - m1);
+  for (int j = 0; j < M2; ++j)
+    coln[j] = "h2=" + std::to_string(j - m2);
   Gamma_hat_corr_m.attr("dimnames") = List::create(rown, coln);
 
-  // --- (2) Sigma_hat_m: n1*n2 x n1*n2, column-major spatial indexing ---
+  return Gamma_hat_corr_m;
+}
+
+// Pick the truncated lag vector to reshape out of a bias_corrected_estimator()
+// fit: which = "corrected" -> Chat_star_m (bias-corrected); which = "naive" ->
+// Chat_m (tapered/truncated sample vector, no correction). Both have the same
+// (2m1+1)*(2m2+1) column-major layout (h1 fastest).
+static NumericVector pick_lagvec(List fit, std::string which) {
+  if (which == "corrected") return fit["Chat_star_m"];
+  if (which == "naive")     return fit["Chat_m"];
+  stop("which must be \"corrected\" or \"naive\"");
+}
+
+//-----------------------------------------------------------------------------
+// NEAREST PSD PROJECTION
+//-----------------------------------------------------------------------------
+
+// Project a symmetric matrix to the nearest positive semi-definite matrix
+// (Frobenius-optimal). Symmetrises M, floors all negative eigenvalues to zero
+// and reconstructs. Parameters:
+//   M: numeric symmetric matrix.
+// Returns the nearest PSD matrix.
+// [[Rcpp::export]]
+arma::mat psd_project(arma::mat M) {
+
+  arma::mat M_sym = 0.5 * (M + M.t());     // symmetrise numerically
+
+  arma::vec lam;
+  arma::mat evec;
+  arma::eig_sym(lam, evec, M_sym);         // ascending eigenvalues, orthonormal
+
+  lam.transform([](double v) { return v > 0.0 ? v : 0.0; });  // floor at 0
+
+  return evec * arma::diagmat(lam) * evec.t();
+}
+
+
+//-----------------------------------------------------------------------------
+// BIAS CORRECTED ESTIMATOR
+//-----------------------------------------------------------------------------
+// Compute the bias-corrected estimator from a data matrix X, with truncation
+// cut-offs m1, m2 for the two dimensions (m2 defaults to m1). Returns a list
+// with the corrected lag vector (Chat_star_m), the uncorrected truncated lag
+// vector (Chat_m), the full lag vector (Chat), the truncated weight matrix 
+// (W_star_m) and the scalars
+// m1, m2, n1, n2. 
+// [[Rcpp::export]]
+List bias_corrected_estimator(NumericMatrix X, int m1, int m2 = -1,
+                                  bool Nh_normalize = true) {
+
+  if (m2 < 0) m2 = m1; // default: same cut-off in both dims
+  int n1 = X.nrow();
+  int n2 = X.ncol();
+  int L1 = 2 * n1 - 1;
+  int L2 = 2 * n2 - 1;
+  int M1 = 2 * m1 + 1;
+  int M2 = 2 * m2 + 1;
+  // Count matrices
+  List mat1 = build_count_matrices(n1);
+  List mat2 = build_count_matrices(n2);
+
+  // W^*_m
+  List W_mats = build_weights(mat1, mat2, m1, m2, Nh_normalize);
+  arma::mat W_star_m = as<arma::mat>(W_mats["W_star_m"]);
+
+  // Gamma_hat (full lag grid) and its column-major vectorisation
+  NumericMatrix Gamma_hat = build_Gamma_naive(X, Nh_normalize);
+  arma::vec Chat = arma::vectorise(as<arma::mat>(Gamma_hat));
+
+  // Sm selects the central (M1*M2) block; h1 (dim-1) varies fastest
+  arma::mat Sm = build_Sm(L1, L2, m1, m2);   // (M1*M2) x (L1*L2)
+  arma::vec Chat_m = Sm * Chat;
+
+  // Solve W*_m x = Chat_m  (bias-corrected lag vector)
+  arma::vec Chat_star_m = arma::solve(W_star_m, Chat_m);
+
+  // Lag names, column-major over {-m1..m1} x {-m2..m2} with h1 varying fastest.
+  CharacterVector vec_names(M1 * M2);
+  int k = 0;
+  for (int h2 = -m2; h2 <= m2; ++h2)
+    for (int h1 = -m1; h1 <= m1; ++h1)
+      vec_names[k++] = "C(" + std::to_string(h1) + "," + std::to_string(h2) + ")";
+
+  NumericVector Chat_m_named    = Rcpp::wrap(Chat_m);
+  NumericVector Chat_star_m_named = Rcpp::wrap(Chat_star_m);
+  Chat_m_named.attr("names")      = vec_names;
+  Chat_star_m_named.attr("names") = vec_names;
+
+  return List::create(
+    Named("Chat_star_m")        = Chat_star_m_named,
+    Named("Chat_m")             = Chat_m_named,
+    Named("Chat")               = Rcpp::wrap(Chat),
+    Named("W_star_m")           = Rcpp::wrap(W_star_m),
+    Named("m1")                 = m1,
+    Named("m2")                 = m2,
+    Named("n1")                 = n1,
+    Named("n2")                 = n2
+  );
+}
+
+//-----------------------------------------------------------------------------
+// LAG MATRIX from a bias_corrected_estimator() FIT
+//-----------------------------------------------------------------------------
+//
+// Reshape a truncated lag vector of a bias_corrected_estimator() fit into the
+// M1 x M2 lag matrix (rows = h1, cols = h2).
+// Parameters:
+//   fit:   output list of bias_corrected_estimator().
+//   which: "corrected" (default) -> Chat_star_m (bias-corrected);
+//          "naive"               -> Chat_m (tapered sample vector, no correction).
+// [[Rcpp::export]]
+NumericMatrix fit_to_Gamma(List fit, std::string which = "corrected") {
+
+  NumericVector Chat = pick_lagvec(fit, which);
+  int m1 = as<int>(fit["m1"]);
+  int m2 = as<int>(fit["m2"]);
+
+  return lagvec_to_matrix(Chat, m1, m2);
+}
+
+//-----------------------------------------------------------------------------
+// SIGMA MATRIX from a bias_corrected_estimator() FIT
+//-----------------------------------------------------------------------------
+//
+// Builds the N x N plug-in Sigma hat covariance from a bias_corrected_estimator()
+// fit result. Reads m1, m2, n1, n2 and the chosen lag vector from the fit list;
+// reshapes it (via lagvec_to_matrix) into the (2m1+1) x (2m2+1) lag matrix and
+// fills the N x N covariance from it.
+// Returns:
+//   Sigma_hat_m_O     : N x N field covariance where
+//                         Sigma_hat_m_O[s,t] = C(s1-t1, s2-t2),
+//                       spatial locations in column-major order, 0 outside the
+//                       {-m1..m1} x {-m2..m2} window.
+//   Sigma_hat_m_O_psd : nearest-PSD projection of Sigma_hat_m_O (a valid
+//                         covariance matrix).
+// Parameters:
+//   fit:   output list of bias_corrected_estimator().
+//   which: "corrected" (default) -> Chat_star_m (bias-corrected);
+//          "naive"               -> Chat_m (tapered sample vector, no correction).
+// [[Rcpp::export]]
+List fit_to_Sigma(List fit, std::string which = "corrected") {
+
+  NumericVector Chat = pick_lagvec(fit, which);
+  int m1 = as<int>(fit["m1"]);
+  int m2 = as<int>(fit["m2"]);
+  int n1 = as<int>(fit["n1"]);
+  int n2 = as<int>(fit["n2"]);
+
+  // Lag matrix (rows = h1, cols = h2), shared reshape helper.
+  NumericMatrix Gamma_hat_corr_m = lagvec_to_matrix(Chat, m1, m2);
+
+  // N x N field covariance, column-major spatial indexing over the n1 x n2
+  // lattice; 0 outside the {-m1..m1} x {-m2..m2} lag window.
   int N = n1 * n2;
-  NumericMatrix Sigma_hat_m(N, N);
+  NumericMatrix Sigma_hat_m_O(N, N);
 
   for (int s2 = 0; s2 < n2; ++s2) {
     for (int s1 = 0; s1 < n1; ++s1) {
@@ -176,20 +318,23 @@ List reshape_Sigma_hat_m(NumericVector Chat_star_m, int m, int n1, int n2) {
         for (int t1 = 0; t1 < n1; ++t1) {
           int h1 = s1 - t1;
           int h2 = s2 - t2;
-          if (std::abs(h1) <= m && std::abs(h2) <= m) {
+          if (std::abs(h1) <= m1 && std::abs(h2) <= m2) {
             int t_idx = t2 * n1 + t1;      // column-major, 0-based
-            int row_g = h1 + m;            // row in Gamma_hat_corr_m
-            int col_g = h2 + m;            // col in Gamma_hat_corr_m
-            Sigma_hat_m(s_idx, t_idx) = Gamma_hat_corr_m(row_g, col_g);
+            int row_g = h1 + m1;           // row in Gamma_hat_corr_m
+            int col_g = h2 + m2;           // col in Gamma_hat_corr_m
+            Sigma_hat_m_O(s_idx, t_idx) = Gamma_hat_corr_m(row_g, col_g);
           }
         }
       }
     }
   }
 
+  NumericMatrix Sigma_hat_m_O_psd =
+    as<NumericMatrix>(Rcpp::wrap(psd_project(as<arma::mat>(Sigma_hat_m_O))));
+
   return List::create(
-    Named("Gamma_hat_corr_m") = Gamma_hat_corr_m,
-    Named("Sigma_hat_m")      = Sigma_hat_m
+    Named("Sigma_hat_m_O")     = Sigma_hat_m_O,
+    Named("Sigma_hat_m_O_psd") = Sigma_hat_m_O_psd
   );
 }
 
@@ -261,141 +406,3 @@ double cressiehawkins_cov(NumericMatrix X, NumericVector hvec,
 }
 
 
-//-----------------------------------------------------------------------------
-// WEIGHT / SELECTION MATRICES FOR THE BIAS-CORRECTED ESTIMATOR
-//-----------------------------------------------------------------------------
-
-// Internal helper: 0-based central indices for lag dimension of size L, half-width m.
-static arma::uvec central_idx(int L, int m) {
-  int center = (int)std::ceil(L / 2.0) - 1;   // 0-based; equals n_k - 1
-  return arma::regspace<arma::uvec>(center - m, center + m);
-}
-
-//-----------------------------------------------------------------------------
-// P_m: (2m+1) x L selection matrix for lags in {-m,...,m} out of
-// {-(n_k-1),...,(n_k-1)}
-//   Returns the (2m+1) x L selection matrix P_m.
-//   Exported mainly for inspection; not needed internally.
-// [[Rcpp::export]]
-arma::mat build_Pm(int L, int m) {
-  int p_size = 2 * m + 1;
-  arma::mat P = arma::zeros<arma::mat>(p_size, L);
-  arma::uvec idx = central_idx(L, m);
-  for (int p = 0; p < p_size; ++p)
-    P(p, idx(p)) = 1.0;
-  return P;
-}
-
-//-----------------------------------------------------------------------------
-// S_m: (2m+1)^2 x (L1*L2) selection matrix for lags in {-m,...,m}^2 out of
-// {-(n1-1),...,(n1-1)} x {-(n2-1),...,(n2-1)}
-//   Returns the (2m+1)^2 x (L1*L2) selection matrix S_m = kron(P2, P1).
-//   In practice, prefer slice_indices() to avoid materialising this matrix.
-// [[Rcpp::export]]
-arma::mat build_Sm(int L1, int L2, int m) {
-  arma::mat P1 = build_Pm(L1, m);
-  arma::mat P2 = build_Pm(L2, m);
-  return arma::kron(P2, P1);
-}
-
-//-----------------------------------------------------------------------------
-// W_m and W*_m builders for the bias-corrected estimator
-//   Builds W_m and W*_m directly from the count-matrix lists returned by
-//   build_count_matrices().  Uses index slicing instead of P %*% A %*% t(P).
-// [[Rcpp::export]]
-List build_W_m(List mat1, List mat2, int m) {
-
-  // Pull matrices out of the R lists
-  arma::mat A1  = as<arma::mat>(mat1["A"]);
-  arma::mat B1  = as<arma::mat>(mat1["B"]);
-  arma::mat D1  = as<arma::mat>(mat1["D"]);
-  arma::mat A1n = as<arma::mat>(mat1["A_norm"]);
-  arma::mat B1n = as<arma::mat>(mat1["B_norm"]);
-  arma::mat D1n = as<arma::mat>(mat1["D_norm"]);
-  int L1        = as<int>(mat1["L"]);
-
-  arma::mat A2  = as<arma::mat>(mat2["A"]);
-  arma::mat B2  = as<arma::mat>(mat2["B"]);
-  arma::mat D2  = as<arma::mat>(mat2["D"]);
-  arma::mat A2n = as<arma::mat>(mat2["A_norm"]);
-  arma::mat B2n = as<arma::mat>(mat2["B_norm"]);
-  arma::mat D2n = as<arma::mat>(mat2["D_norm"]);
-  int L2        = as<int>(mat2["L"]);
-
-  // Central index ranges
-  arma::uvec idx1 = central_idx(L1, m);
-  arma::uvec idx2 = central_idx(L2, m);
-
-  int krondim = (2 * m + 1) * (2 * m + 1);
-  arma::mat I  = arma::eye<arma::mat>(krondim, krondim);
-
-  // Unnormalised W_m
-  arma::mat W_m = I
-    - arma::kron(A2.submat(idx2, idx2), A1.submat(idx1, idx1))
-    - arma::kron(B2.submat(idx2, idx2), B1.submat(idx1, idx1))
-    + arma::kron(D2.submat(idx2, idx2), D1.submat(idx1, idx1));
-
-  // Normalised W*_m
-  arma::mat W_star_m = I
-    - arma::kron(A2n.submat(idx2, idx2), A1n.submat(idx1, idx1))
-    - arma::kron(B2n.submat(idx2, idx2), B1n.submat(idx1, idx1))
-    + arma::kron(D2n.submat(idx2, idx2), D1n.submat(idx1, idx1));
-
-  return List::create(
-    Named("W_m")      = wrap(W_m),
-    Named("W_star_m") = wrap(W_star_m)
-  );
-}
-
-//-----------------------------------------------------------------------------
-// Bias-corrected estimator builder - MAIN FUNCTION
-//   Full bias-corrected estimator
-// [[Rcpp::export]]
-List bias_corrected_estimator(NumericMatrix X, int m,
-                                  bool Nh_normalize = true) {
-  int n1 = X.nrow();
-  int n2 = X.ncol();
-
-  // Count matrices — now available via counting.h
-  List mat1 = build_count_matrices(n1, Nh_normalize);
-  List mat2 = build_count_matrices(n2, Nh_normalize);
-
-  // W*_m via optimised C++ builder
-  List W_mats = build_W_m(mat1, mat2, m);
-  arma::mat W_star_m = as<arma::mat>(W_mats["W_star_m"]);
-
-  // Gamma_hat (C++) — reuse existing function
-  NumericMatrix Gamma_r = build_Gamma_naive(X, Nh_normalize);
-  arma::mat Gamma_hat   = as<arma::mat>(Gamma_r);
-
-  // Extract Chat_m: central (2m+1)x(2m+1) submatrix, vectorised column-major
-  // rows of Gamma_hat = h1 lags, cols = h2 lags; center is (n1-1, n2-1) 0-based
-  arma::uvec ridx = arma::regspace<arma::uvec>(n1 - 1 - m, n1 - 1 + m);
-  arma::uvec cidx = arma::regspace<arma::uvec>(n2 - 1 - m, n2 - 1 + m);
-  arma::vec Chat_m = arma::vectorise(Gamma_hat.submat(ridx, cidx));
-
-  // Solve W*_m x = Chat_m  (no inverse formed)
-  arma::vec Chat_star_m = arma::solve(W_star_m, Chat_m);
-
-  // Lag names: same convention as R version — "C(h1,h2)", column-major order
-  int L_m = 2 * m + 1;
-  CharacterVector vec_names(L_m * L_m);
-  int k = 0;
-  for (int j = -m; j <= m; ++j)
-    for (int i = -m; i <= m; ++i)
-      vec_names[k++] = "C(" + std::to_string(i) + "," + std::to_string(j) + ")";
-
-  NumericVector Chat_m_r    = wrap(Chat_m);
-  NumericVector Chat_star_r = wrap(Chat_star_m);
-  Chat_m_r.attr("names")    = vec_names;
-  Chat_star_r.attr("names") = vec_names;
-
-  return List::create(
-    Named("Chat_star_m") = Chat_star_r,
-    Named("Chat_m")      = Chat_m_r,
-    Named("W_star_m")    = wrap(W_star_m),
-    Named("m")           = m,
-    Named("n1")          = n1,
-    Named("n2")          = n2
-  );
-}

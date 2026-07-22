@@ -5,12 +5,16 @@
 \title{Build the full and normalised weight matrices W_n and W*_n from the
 one-dimensional count matrices for each spatial dimension.}
 \usage{
-build_W(mat1, mat2)
+build_W(mat1, mat2, Nh_normalize = TRUE)
 }
 \arguments{
 \item{mat1}{Output of build_count_matrices(n1).}
 
 \item{mat2}{Output of build_count_matrices(n2).}
+
+\item{Nh_normalize}{Normalisation of the supplied count matrices. For the
+constant 1/N prefactor (FALSE) the normalised weight matrix uses the
+Bartlett-window leading block diag(Delta2 (x) Delta1) instead of I.}
 }
 \value{
 A list with:

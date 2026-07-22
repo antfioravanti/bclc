@@ -13,8 +13,24 @@ D_count <- function(n, r) {
     .Call(`_bclc_D_count`, n, r)
 }
 
-build_count_matrices <- function(n_k, Nh_normalize) {
-    .Call(`_bclc_build_count_matrices`, n_k, Nh_normalize)
+build_count_matrices <- function(n_k) {
+    .Call(`_bclc_build_count_matrices`, n_k)
+}
+
+build_Pm <- function(L, m) {
+    .Call(`_bclc_build_Pm`, L, m)
+}
+
+build_Pmc <- function(L, m) {
+    .Call(`_bclc_build_Pmc`, L, m)
+}
+
+build_Sm <- function(L1, L2, m1, m2 = -1L) {
+    .Call(`_bclc_build_Sm`, L1, L2, m1, m2)
+}
+
+build_weights <- function(mat1, mat2, m1, m2 = -1L, Nh_normalize = TRUE) {
+    .Call(`_bclc_build_weights`, mat1, mat2, m1, m2, Nh_normalize)
 }
 
 eval_true_cov <- function(hvec, beta, lambdas, alphas, sigma) {
@@ -41,8 +57,20 @@ build_Sigma_naive <- function(X, Nh_normalize = TRUE) {
     .Call(`_bclc_build_Sigma_naive`, X, Nh_normalize)
 }
 
-reshape_Sigma_hat_m <- function(Chat_star_m, m, n1, n2) {
-    .Call(`_bclc_reshape_Sigma_hat_m`, Chat_star_m, m, n1, n2)
+psd_project <- function(M) {
+    .Call(`_bclc_psd_project`, M)
+}
+
+bias_corrected_estimator <- function(X, m1, m2 = -1L, Nh_normalize = TRUE) {
+    .Call(`_bclc_bias_corrected_estimator`, X, m1, m2, Nh_normalize)
+}
+
+fit_to_Gamma <- function(fit, which = "corrected") {
+    .Call(`_bclc_fit_to_Gamma`, fit, which)
+}
+
+fit_to_Sigma <- function(fit, which = "corrected") {
+    .Call(`_bclc_fit_to_Sigma`, fit, which)
 }
 
 cressiehawkins_semivariogram <- function(X, hvec, Nh_normalize = TRUE) {
@@ -53,19 +81,79 @@ cressiehawkins_cov <- function(X, hvec, Nh_normalize = TRUE) {
     .Call(`_bclc_cressiehawkins_cov`, X, hvec, Nh_normalize)
 }
 
-build_Pm <- function(L, m) {
-    .Call(`_bclc_build_Pm`, L, m)
+cov_sample_autocov_opt <- function(n1, n2, h1, h2, h3, h4, mu, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_cov_sample_autocov_opt`, n1, n2, h1, h2, h3, h4, mu, beta, lambdas, alphas, sigma)
 }
 
-build_Sm <- function(L1, L2, m) {
-    .Call(`_bclc_build_Sm`, L1, L2, m)
+cov_sample_autocov_zeromean <- function(n1, n2, h1, h2, h3, h4, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_cov_sample_autocov_zeromean`, n1, n2, h1, h2, h3, h4, beta, lambdas, alphas, sigma)
 }
 
-build_W_m <- function(mat1, mat2, m) {
-    .Call(`_bclc_build_W_m`, mat1, mat2, m)
+cov_Chat <- function(n1, n2, h, g, mu, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_cov_Chat`, n1, n2, h, g, mu, beta, lambdas, alphas, sigma)
 }
 
-bias_corrected_estimator <- function(X, m, Nh_normalize = TRUE) {
-    .Call(`_bclc_bias_corrected_estimator`, X, m, Nh_normalize)
+var_Chat <- function(n1, n2, h, mu, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_var_Chat`, n1, n2, h, mu, beta, lambdas, alphas, sigma)
+}
+
+bias_Chat <- function(n1, n2, h1, h2, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_bias_Chat`, n1, n2, h1, h2, beta, lambdas, alphas, sigma)
+}
+
+build_Omega_m <- function(n1, n2, m, mu, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_build_Omega_m`, n1, n2, m, mu, beta, lambdas, alphas, sigma)
+}
+
+build_Omega_full <- function(n1, n2, mu, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_build_Omega_full`, n1, n2, mu, beta, lambdas, alphas, sigma)
+}
+
+build_bias_m <- function(n1, n2, m, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_build_bias_m`, n1, n2, m, beta, lambdas, alphas, sigma)
+}
+
+build_bias_full <- function(n1, n2, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_build_bias_full`, n1, n2, beta, lambdas, alphas, sigma)
+}
+
+build_MSE_m <- function(n1, n2, m, mu, beta, lambdas, alphas, sigma, add_dimnames = FALSE) {
+    .Call(`_bclc_build_MSE_m`, n1, n2, m, mu, beta, lambdas, alphas, sigma, add_dimnames)
+}
+
+build_MSE_full <- function(n1, n2, mu, beta, lambdas, alphas, sigma, add_dimnames = FALSE) {
+    .Call(`_bclc_build_MSE_full`, n1, n2, mu, beta, lambdas, alphas, sigma, add_dimnames)
+}
+
+expand_MSE_m_to_full <- function(n1, n2, m, mu, beta, lambdas, alphas, sigma, add_dimnames = FALSE) {
+    .Call(`_bclc_expand_MSE_m_to_full`, n1, n2, m, mu, beta, lambdas, alphas, sigma, add_dimnames)
+}
+
+expand_MSE_m_to_full_from_components <- function(Omega_m_transformed, bias_m_transformed, n1, n2, m, beta, lambdas, alphas, sigma, add_dimnames = FALSE) {
+    .Call(`_bclc_expand_MSE_m_to_full_from_components`, Omega_m_transformed, bias_m_transformed, n1, n2, m, beta, lambdas, alphas, sigma, add_dimnames)
+}
+
+cov_Chat_compact <- function(n1, n2, h, g, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_cov_Chat_compact`, n1, n2, h, g, beta, lambdas, alphas, sigma)
+}
+
+var_Chat_compact <- function(n1, n2, h, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_var_Chat_compact`, n1, n2, h, beta, lambdas, alphas, sigma)
+}
+
+build_Omega_m_compact <- function(n1, n2, m, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_build_Omega_m_compact`, n1, n2, m, beta, lambdas, alphas, sigma)
+}
+
+build_Omega_full_compact <- function(n1, n2, beta, lambdas, alphas, sigma) {
+    .Call(`_bclc_build_Omega_full_compact`, n1, n2, beta, lambdas, alphas, sigma)
+}
+
+build_MSE_m_compact <- function(n1, n2, m, beta, lambdas, alphas, sigma, add_dimnames = FALSE) {
+    .Call(`_bclc_build_MSE_m_compact`, n1, n2, m, beta, lambdas, alphas, sigma, add_dimnames)
+}
+
+build_MSE_full_compact <- function(n1, n2, beta, lambdas, alphas, sigma, add_dimnames = FALSE) {
+    .Call(`_bclc_build_MSE_full_compact`, n1, n2, beta, lambdas, alphas, sigma, add_dimnames)
 }
 

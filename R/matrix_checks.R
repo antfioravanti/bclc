@@ -361,9 +361,9 @@ full_matrix_report <- function(A, label = "A", block_size=2, tol = 1e-10) {
 #'          and the full W*_n.
 diagnose_weight_matrix <- function(n1, n2, Nh_normalize = TRUE) {
 
-  mat1 <- build_count_matrices(n1, Nh_normalize)
-  mat2 <- build_count_matrices(n2, Nh_normalize)
-  W    <- build_W(mat1, mat2)
+  mat1 <- build_count_matrices(n1)
+  mat2 <- build_count_matrices(n2)
+  W    <- build_weights(mat1, mat2, n1 - 1, n2 - 1, Nh_normalize)
 
   list(
     A1_star = full_matrix_report(mat1$A_norm, "A*_1"),

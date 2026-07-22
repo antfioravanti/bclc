@@ -50,14 +50,66 @@ BEGIN_RCPP
 END_RCPP
 }
 // build_count_matrices
-List build_count_matrices(int n_k, bool Nh_normalize);
-RcppExport SEXP _bclc_build_count_matrices(SEXP n_kSEXP, SEXP Nh_normalizeSEXP) {
+List build_count_matrices(int n_k);
+RcppExport SEXP _bclc_build_count_matrices(SEXP n_kSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< int >::type n_k(n_kSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_count_matrices(n_k));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_Pm
+arma::mat build_Pm(int L, int m);
+RcppExport SEXP _bclc_build_Pm(SEXP LSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type L(LSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_Pm(L, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_Pmc
+arma::mat build_Pmc(int L, int m);
+RcppExport SEXP _bclc_build_Pmc(SEXP LSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type L(LSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_Pmc(L, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_Sm
+arma::mat build_Sm(int L1, int L2, int m1, int m2);
+RcppExport SEXP _bclc_build_Sm(SEXP L1SEXP, SEXP L2SEXP, SEXP m1SEXP, SEXP m2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type L1(L1SEXP);
+    Rcpp::traits::input_parameter< int >::type L2(L2SEXP);
+    Rcpp::traits::input_parameter< int >::type m1(m1SEXP);
+    Rcpp::traits::input_parameter< int >::type m2(m2SEXP);
+    rcpp_result_gen = Rcpp::wrap(build_Sm(L1, L2, m1, m2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_weights
+List build_weights(List mat1, List mat2, int m1, int m2, bool Nh_normalize);
+RcppExport SEXP _bclc_build_weights(SEXP mat1SEXP, SEXP mat2SEXP, SEXP m1SEXP, SEXP m2SEXP, SEXP Nh_normalizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type mat1(mat1SEXP);
+    Rcpp::traits::input_parameter< List >::type mat2(mat2SEXP);
+    Rcpp::traits::input_parameter< int >::type m1(m1SEXP);
+    Rcpp::traits::input_parameter< int >::type m2(m2SEXP);
     Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_count_matrices(n_k, Nh_normalize));
+    rcpp_result_gen = Rcpp::wrap(build_weights(mat1, mat2, m1, m2, Nh_normalize));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -145,17 +197,52 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// reshape_Sigma_hat_m
-List reshape_Sigma_hat_m(NumericVector Chat_star_m, int m, int n1, int n2);
-RcppExport SEXP _bclc_reshape_Sigma_hat_m(SEXP Chat_star_mSEXP, SEXP mSEXP, SEXP n1SEXP, SEXP n2SEXP) {
+// psd_project
+arma::mat psd_project(arma::mat M);
+RcppExport SEXP _bclc_psd_project(SEXP MSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type Chat_star_m(Chat_star_mSEXP);
-    Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
-    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
-    rcpp_result_gen = Rcpp::wrap(reshape_Sigma_hat_m(Chat_star_m, m, n1, n2));
+    Rcpp::traits::input_parameter< arma::mat >::type M(MSEXP);
+    rcpp_result_gen = Rcpp::wrap(psd_project(M));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bias_corrected_estimator
+List bias_corrected_estimator(NumericMatrix X, int m1, int m2, bool Nh_normalize);
+RcppExport SEXP _bclc_bias_corrected_estimator(SEXP XSEXP, SEXP m1SEXP, SEXP m2SEXP, SEXP Nh_normalizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< int >::type m1(m1SEXP);
+    Rcpp::traits::input_parameter< int >::type m2(m2SEXP);
+    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(bias_corrected_estimator(X, m1, m2, Nh_normalize));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit_to_Gamma
+NumericMatrix fit_to_Gamma(List fit, std::string which);
+RcppExport SEXP _bclc_fit_to_Gamma(SEXP fitSEXP, SEXP whichSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type fit(fitSEXP);
+    Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_to_Gamma(fit, which));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit_to_Sigma
+List fit_to_Sigma(List fit, std::string which);
+RcppExport SEXP _bclc_fit_to_Sigma(SEXP fitSEXP, SEXP whichSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type fit(fitSEXP);
+    Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_to_Sigma(fit, which));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -185,54 +272,346 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// build_Pm
-arma::mat build_Pm(int L, int m);
-RcppExport SEXP _bclc_build_Pm(SEXP LSEXP, SEXP mSEXP) {
+// cov_sample_autocov_opt
+double cov_sample_autocov_opt(int n1, int n2, int h1, int h2, int h3, int h4, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_cov_sample_autocov_opt(SEXP n1SEXP, SEXP n2SEXP, SEXP h1SEXP, SEXP h2SEXP, SEXP h3SEXP, SEXP h4SEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type L(LSEXP);
-    Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_Pm(L, m));
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type h1(h1SEXP);
+    Rcpp::traits::input_parameter< int >::type h2(h2SEXP);
+    Rcpp::traits::input_parameter< int >::type h3(h3SEXP);
+    Rcpp::traits::input_parameter< int >::type h4(h4SEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(cov_sample_autocov_opt(n1, n2, h1, h2, h3, h4, mu, beta, lambdas, alphas, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
-// build_Sm
-arma::mat build_Sm(int L1, int L2, int m);
-RcppExport SEXP _bclc_build_Sm(SEXP L1SEXP, SEXP L2SEXP, SEXP mSEXP) {
+// cov_sample_autocov_zeromean
+double cov_sample_autocov_zeromean(int n1, int n2, int h1, int h2, int h3, int h4, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_cov_sample_autocov_zeromean(SEXP n1SEXP, SEXP n2SEXP, SEXP h1SEXP, SEXP h2SEXP, SEXP h3SEXP, SEXP h4SEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type L1(L1SEXP);
-    Rcpp::traits::input_parameter< int >::type L2(L2SEXP);
-    Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_Sm(L1, L2, m));
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type h1(h1SEXP);
+    Rcpp::traits::input_parameter< int >::type h2(h2SEXP);
+    Rcpp::traits::input_parameter< int >::type h3(h3SEXP);
+    Rcpp::traits::input_parameter< int >::type h4(h4SEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(cov_sample_autocov_zeromean(n1, n2, h1, h2, h3, h4, beta, lambdas, alphas, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
-// build_W_m
-List build_W_m(List mat1, List mat2, int m);
-RcppExport SEXP _bclc_build_W_m(SEXP mat1SEXP, SEXP mat2SEXP, SEXP mSEXP) {
+// cov_Chat
+double cov_Chat(int n1, int n2, NumericVector h, NumericVector g, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_cov_Chat(SEXP n1SEXP, SEXP n2SEXP, SEXP hSEXP, SEXP gSEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type mat1(mat1SEXP);
-    Rcpp::traits::input_parameter< List >::type mat2(mat2SEXP);
-    Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_W_m(mat1, mat2, m));
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type h(hSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type g(gSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(cov_Chat(n1, n2, h, g, mu, beta, lambdas, alphas, sigma));
     return rcpp_result_gen;
 END_RCPP
 }
-// bias_corrected_estimator
-List bias_corrected_estimator(NumericMatrix X, int m, bool Nh_normalize);
-RcppExport SEXP _bclc_bias_corrected_estimator(SEXP XSEXP, SEXP mSEXP, SEXP Nh_normalizeSEXP) {
+// var_Chat
+double var_Chat(int n1, int n2, NumericVector h, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_var_Chat(SEXP n1SEXP, SEXP n2SEXP, SEXP hSEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type h(hSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(var_Chat(n1, n2, h, mu, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bias_Chat
+double bias_Chat(int n1, int n2, int h1, int h2, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_bias_Chat(SEXP n1SEXP, SEXP n2SEXP, SEXP h1SEXP, SEXP h2SEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type h1(h1SEXP);
+    Rcpp::traits::input_parameter< int >::type h2(h2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(bias_Chat(n1, n2, h1, h2, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_Omega_m
+NumericMatrix build_Omega_m(int n1, int n2, int m, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_build_Omega_m(SEXP n1SEXP, SEXP n2SEXP, SEXP mSEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
     Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(bias_corrected_estimator(X, m, Nh_normalize));
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_Omega_m(n1, n2, m, mu, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_Omega_full
+NumericMatrix build_Omega_full(int n1, int n2, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_build_Omega_full(SEXP n1SEXP, SEXP n2SEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_Omega_full(n1, n2, mu, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_bias_m
+NumericVector build_bias_m(int n1, int n2, int m, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_build_bias_m(SEXP n1SEXP, SEXP n2SEXP, SEXP mSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_bias_m(n1, n2, m, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_bias_full
+NumericVector build_bias_full(int n1, int n2, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_build_bias_full(SEXP n1SEXP, SEXP n2SEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_bias_full(n1, n2, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_MSE_m
+NumericMatrix build_MSE_m(int n1, int n2, int m, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma, bool add_dimnames);
+RcppExport SEXP _bclc_build_MSE_m(SEXP n1SEXP, SEXP n2SEXP, SEXP mSEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP add_dimnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type add_dimnames(add_dimnamesSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_MSE_m(n1, n2, m, mu, beta, lambdas, alphas, sigma, add_dimnames));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_MSE_full
+NumericMatrix build_MSE_full(int n1, int n2, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma, bool add_dimnames);
+RcppExport SEXP _bclc_build_MSE_full(SEXP n1SEXP, SEXP n2SEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP add_dimnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type add_dimnames(add_dimnamesSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_MSE_full(n1, n2, mu, beta, lambdas, alphas, sigma, add_dimnames));
+    return rcpp_result_gen;
+END_RCPP
+}
+// expand_MSE_m_to_full
+NumericMatrix expand_MSE_m_to_full(int n1, int n2, int m, double mu, double beta, NumericVector lambdas, NumericVector alphas, double sigma, bool add_dimnames);
+RcppExport SEXP _bclc_expand_MSE_m_to_full(SEXP n1SEXP, SEXP n2SEXP, SEXP mSEXP, SEXP muSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP add_dimnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type add_dimnames(add_dimnamesSEXP);
+    rcpp_result_gen = Rcpp::wrap(expand_MSE_m_to_full(n1, n2, m, mu, beta, lambdas, alphas, sigma, add_dimnames));
+    return rcpp_result_gen;
+END_RCPP
+}
+// expand_MSE_m_to_full_from_components
+NumericMatrix expand_MSE_m_to_full_from_components(NumericMatrix Omega_m_transformed, NumericVector bias_m_transformed, int n1, int n2, int m, double beta, NumericVector lambdas, NumericVector alphas, double sigma, bool add_dimnames);
+RcppExport SEXP _bclc_expand_MSE_m_to_full_from_components(SEXP Omega_m_transformedSEXP, SEXP bias_m_transformedSEXP, SEXP n1SEXP, SEXP n2SEXP, SEXP mSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP add_dimnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type Omega_m_transformed(Omega_m_transformedSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type bias_m_transformed(bias_m_transformedSEXP);
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type add_dimnames(add_dimnamesSEXP);
+    rcpp_result_gen = Rcpp::wrap(expand_MSE_m_to_full_from_components(Omega_m_transformed, bias_m_transformed, n1, n2, m, beta, lambdas, alphas, sigma, add_dimnames));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cov_Chat_compact
+double cov_Chat_compact(int n1, int n2, NumericVector h, NumericVector g, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_cov_Chat_compact(SEXP n1SEXP, SEXP n2SEXP, SEXP hSEXP, SEXP gSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type h(hSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type g(gSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(cov_Chat_compact(n1, n2, h, g, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// var_Chat_compact
+double var_Chat_compact(int n1, int n2, NumericVector h, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_var_Chat_compact(SEXP n1SEXP, SEXP n2SEXP, SEXP hSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type h(hSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(var_Chat_compact(n1, n2, h, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_Omega_m_compact
+NumericMatrix build_Omega_m_compact(int n1, int n2, int m, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_build_Omega_m_compact(SEXP n1SEXP, SEXP n2SEXP, SEXP mSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_Omega_m_compact(n1, n2, m, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_Omega_full_compact
+NumericMatrix build_Omega_full_compact(int n1, int n2, double beta, NumericVector lambdas, NumericVector alphas, double sigma);
+RcppExport SEXP _bclc_build_Omega_full_compact(SEXP n1SEXP, SEXP n2SEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_Omega_full_compact(n1, n2, beta, lambdas, alphas, sigma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_MSE_m_compact
+NumericMatrix build_MSE_m_compact(int n1, int n2, int m, double beta, NumericVector lambdas, NumericVector alphas, double sigma, bool add_dimnames);
+RcppExport SEXP _bclc_build_MSE_m_compact(SEXP n1SEXP, SEXP n2SEXP, SEXP mSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP add_dimnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type add_dimnames(add_dimnamesSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_MSE_m_compact(n1, n2, m, beta, lambdas, alphas, sigma, add_dimnames));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_MSE_full_compact
+NumericMatrix build_MSE_full_compact(int n1, int n2, double beta, NumericVector lambdas, NumericVector alphas, double sigma, bool add_dimnames);
+RcppExport SEXP _bclc_build_MSE_full_compact(SEXP n1SEXP, SEXP n2SEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP add_dimnamesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n1(n1SEXP);
+    Rcpp::traits::input_parameter< int >::type n2(n2SEXP);
+    Rcpp::traits::input_parameter< double >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type lambdas(lambdasSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< bool >::type add_dimnames(add_dimnamesSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_MSE_full_compact(n1, n2, beta, lambdas, alphas, sigma, add_dimnames));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -241,20 +620,42 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bclc_A_count", (DL_FUNC) &_bclc_A_count, 3},
     {"_bclc_B_count", (DL_FUNC) &_bclc_B_count, 3},
     {"_bclc_D_count", (DL_FUNC) &_bclc_D_count, 2},
-    {"_bclc_build_count_matrices", (DL_FUNC) &_bclc_build_count_matrices, 2},
+    {"_bclc_build_count_matrices", (DL_FUNC) &_bclc_build_count_matrices, 1},
+    {"_bclc_build_Pm", (DL_FUNC) &_bclc_build_Pm, 2},
+    {"_bclc_build_Pmc", (DL_FUNC) &_bclc_build_Pmc, 2},
+    {"_bclc_build_Sm", (DL_FUNC) &_bclc_build_Sm, 4},
+    {"_bclc_build_weights", (DL_FUNC) &_bclc_build_weights, 5},
     {"_bclc_eval_true_cov", (DL_FUNC) &_bclc_eval_true_cov, 5},
     {"_bclc_ModifiedExponentialCovariance", (DL_FUNC) &_bclc_ModifiedExponentialCovariance, 7},
     {"_bclc_build_true_Gamma", (DL_FUNC) &_bclc_build_true_Gamma, 5},
     {"_bclc_naive_sample_cov", (DL_FUNC) &_bclc_naive_sample_cov, 3},
     {"_bclc_build_Gamma_naive", (DL_FUNC) &_bclc_build_Gamma_naive, 2},
     {"_bclc_build_Sigma_naive", (DL_FUNC) &_bclc_build_Sigma_naive, 2},
-    {"_bclc_reshape_Sigma_hat_m", (DL_FUNC) &_bclc_reshape_Sigma_hat_m, 4},
+    {"_bclc_psd_project", (DL_FUNC) &_bclc_psd_project, 1},
+    {"_bclc_bias_corrected_estimator", (DL_FUNC) &_bclc_bias_corrected_estimator, 4},
+    {"_bclc_fit_to_Gamma", (DL_FUNC) &_bclc_fit_to_Gamma, 2},
+    {"_bclc_fit_to_Sigma", (DL_FUNC) &_bclc_fit_to_Sigma, 2},
     {"_bclc_cressiehawkins_semivariogram", (DL_FUNC) &_bclc_cressiehawkins_semivariogram, 3},
     {"_bclc_cressiehawkins_cov", (DL_FUNC) &_bclc_cressiehawkins_cov, 3},
-    {"_bclc_build_Pm", (DL_FUNC) &_bclc_build_Pm, 2},
-    {"_bclc_build_Sm", (DL_FUNC) &_bclc_build_Sm, 3},
-    {"_bclc_build_W_m", (DL_FUNC) &_bclc_build_W_m, 3},
-    {"_bclc_bias_corrected_estimator", (DL_FUNC) &_bclc_bias_corrected_estimator, 3},
+    {"_bclc_cov_sample_autocov_opt", (DL_FUNC) &_bclc_cov_sample_autocov_opt, 11},
+    {"_bclc_cov_sample_autocov_zeromean", (DL_FUNC) &_bclc_cov_sample_autocov_zeromean, 10},
+    {"_bclc_cov_Chat", (DL_FUNC) &_bclc_cov_Chat, 9},
+    {"_bclc_var_Chat", (DL_FUNC) &_bclc_var_Chat, 8},
+    {"_bclc_bias_Chat", (DL_FUNC) &_bclc_bias_Chat, 8},
+    {"_bclc_build_Omega_m", (DL_FUNC) &_bclc_build_Omega_m, 8},
+    {"_bclc_build_Omega_full", (DL_FUNC) &_bclc_build_Omega_full, 7},
+    {"_bclc_build_bias_m", (DL_FUNC) &_bclc_build_bias_m, 7},
+    {"_bclc_build_bias_full", (DL_FUNC) &_bclc_build_bias_full, 6},
+    {"_bclc_build_MSE_m", (DL_FUNC) &_bclc_build_MSE_m, 9},
+    {"_bclc_build_MSE_full", (DL_FUNC) &_bclc_build_MSE_full, 8},
+    {"_bclc_expand_MSE_m_to_full", (DL_FUNC) &_bclc_expand_MSE_m_to_full, 9},
+    {"_bclc_expand_MSE_m_to_full_from_components", (DL_FUNC) &_bclc_expand_MSE_m_to_full_from_components, 10},
+    {"_bclc_cov_Chat_compact", (DL_FUNC) &_bclc_cov_Chat_compact, 8},
+    {"_bclc_var_Chat_compact", (DL_FUNC) &_bclc_var_Chat_compact, 7},
+    {"_bclc_build_Omega_m_compact", (DL_FUNC) &_bclc_build_Omega_m_compact, 7},
+    {"_bclc_build_Omega_full_compact", (DL_FUNC) &_bclc_build_Omega_full_compact, 6},
+    {"_bclc_build_MSE_m_compact", (DL_FUNC) &_bclc_build_MSE_m_compact, 8},
+    {"_bclc_build_MSE_full_compact", (DL_FUNC) &_bclc_build_MSE_full_compact, 7},
     {NULL, NULL, 0}
 };
 

@@ -30,22 +30,6 @@ Jmat <- function(n) {
 #'
 #' @return A logical scalar.
 #' @export
-#------------------------------------------------------------------------------
-# NEAREST PSD PROJECTION
-#' Project a symmetric matrix to the nearest positive semi-definite matrix
-#' (Frobenius-optimal). Floors all negative eigenvalues to zero.
-#'
-#' @param M A numeric symmetric matrix.
-#' @return The nearest PSD matrix.
-psd_project <- function(M) {
-  M_sym <- (M + t(M)) / 2                  # symmetrise numerically
-  ed    <- eigen(M_sym, symmetric = TRUE)
-  lam   <- pmax(ed$values, 0)
-  ed$vectors %*% (lam * t(ed$vectors))     # avoids diag(lam) allocation
-}
-
-#------------------------------------------------------------------------------
-# POSITIVE SEMI DEFINITE CHECKER FOR A MATRIX
 is_psd <- function(M, tol = 1e-8) {
   if (!isSymmetric(M, tol = tol)) return(FALSE)
   ev <- eigen(M, symmetric = TRUE, only.values = TRUE)$values

@@ -19,9 +19,8 @@ The package uses Rcpp / RcppArmadillo, so a working C++ toolchain is required
 (Rtools on Windows, Xcode CLT on macOS, `r-base-dev` on Linux).
 
 ```r
-# from the parent directory that contains bclc/
-install.packages(c("Rcpp", "RcppArmadillo", "MASS"))   # core deps
-devtools::install("bclc")
+install.packages(c("Rcpp", "RcppArmadillo", "MASS", "remotes"))   # core deps
+remotes::install_github("antfioravanti/bclc")
 library(bclc)
 ```
 ## Example
@@ -48,10 +47,11 @@ The result holds the data matrix and the parameters used to generate it:
 - `sim$Sigma` — the true N × N covariance used to generate `X`
 - `sim$params` — the parameters above
 
-**2) Bias-corrected estimate**, truncating lags to `{-m,...,m}^2` with `m = 3` estimating with bias correction:
+**2) Bias-corrected estimate**, truncating lags to `{-m1,...,m1}^2` with `m1 = 3`
+estimating with bias correction:
 
 ```r
-fit <- bias_corrected_estimator(sim$X, m = 3)
+fit <- bias_corrected_estimator(sim$X, m1 = 3)   # m2 defaults to m1
 ```
 
 This returns both the naive and the corrected autocovariances:
@@ -59,6 +59,7 @@ This returns both the naive and the corrected autocovariances:
 - `fit$Chat_m` — naive sample autocovariances (vectorised, column-major)
 - `fit$Chat_star_m` — bias-corrected autocovariances (same ordering)
 - `fit$W_star_m` — the weight matrix that was inverted
+- `fit$m1`, `fit$m2`, `fit$n1`, `fit$n2` — the cut-offs and grid dimensions
 
 Both vectors are named `C(h1,h2)` in column-major lag order, so you can compare the
 naive and corrected values lag by lag:
@@ -69,19 +70,24 @@ head(data.frame(naive = fit$Chat_m, corrected = fit$Chat_star_m), 9)
 
 ## Turning the estimate into an N×N covariance matrix
 
-`reshape_Sigma_hat_m()` reshapes the corrected lag vector into a lag-indexed matrix
-and a plug-in field covariance matrix (zero outside the `m`-window):
+Two helpers take the fit object directly. `fit_to_Gamma()` reshapes the corrected lag
+vector into a lag-indexed matrix; `fit_to_Sigma()` builds the plug-in field covariance
+matrix (zero outside the `m`-window) together with its nearest-PSD projection:
 
 ```r
-res <- reshape_Sigma_hat_m(fit$Chat_star_m, m = 3, n1 = 20, n2 = 20)
+Gamma <- fit_to_Gamma(fit)          # (2m1+1) x (2m2+1) lag matrix, rows = h1, cols = h2
 
-res$Gamma_hat_corr_m   # (2m+1) x (2m+1) lag matrix, rows = h1, cols = h2
-res$Sigma_hat_m        # N x N covariance matrix
+Sig <- fit_to_Sigma(fit)            # list with two N x N matrices:
+Sig$Sigma_hat_m_O                   #   plug-in field covariance (not guaranteed PSD)
+Sig$Sigma_hat_m_O_psd               #   nearest-PSD projection (a valid covariance)
 
-# The reshaped matrix is not guaranteed PSD; project if you need a valid covariance:
-Sigma_psd <- psd_project(res$Sigma_hat_m)
-is_psd(Sigma_psd)      # TRUE
+is_psd(Sig$Sigma_hat_m_O_psd)       # TRUE
 ```
+
+Both helpers default to the corrected estimate; pass `which = "naive"` to reshape the
+uncorrected (tapered) lag vector instead. The PSD projection is done inside
+`fit_to_Sigma()`, but `psd_project()` and `is_psd()` remain exported if you need them
+directly.
 
 ## Notation and conventions
 
@@ -103,8 +109,10 @@ a non-separable one.
 |---|---|
 | `simulate_lattice_process()` | Simulate one Gaussian realisation on the lattice. |
 | `bias_corrected_estimator()` | Main estimator: data → naive and corrected autocovariances. |
-| `reshape_Sigma_hat_m()` | Corrected lag vector → lag matrix + N×N covariance. |
-| `build_weight_matrices()` | Build `W_m` / `W*_m` directly from `n1, n2, m`. |
+| `fit_to_Gamma()` | Fit → `(2m1+1) × (2m2+1)` lag matrix. |
+| `fit_to_Sigma()` | Fit → N×N field covariance and its nearest-PSD projection. |
+| `build_count_matrices()` | 1D overlap-count matrices for one grid dimension. |
+| `build_weights()` | Build `W_m` / `W*_m` from the count matrices (per-dimension cut-offs). |
 
 ## License
 

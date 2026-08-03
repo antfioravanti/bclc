@@ -1,6 +1,6 @@
 Package: bclc
 Title: Bias-Corrected Lattice Covariance Estimation
-Version: 0.1.0
+Version: 0.4.0
 Authors@R:
     person("Antonio", "Fioravanti", , "antoniofioravanti4@gmail.com", role = c("aut", "cre"))
 Description: Bias-corrected estimation of sample covariance functions on

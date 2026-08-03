@@ -66,6 +66,102 @@ double naive_sample_cov(NumericMatrix X, NumericVector hvec,
   return cov_value / (Nh_normalize ? Nh : N);
 }
 //-----------------------------------------------------------------------------
+// DATA-DRIVEN SELECTION OF THE TRUNCATION CUT-OFF
+//-----------------------------------------------------------------------------
+// Select the truncation cut-off implied by the lag-one naive correlations along
+// the two coordinate axes and the grid size
+//
+//   c0     = Chat(0,0)
+//   rho_k  = Chat(e_k) / c0               (e_1 = (1,0), e_2 = (0,1)); k = 1, 2
+//   lambda_hat_k = -1 / log(rho_k)        
+//   m_k    = round( kappa * (n_k * lambda_hat_k)^power )
+//
+// With pooled = true a single cut-off is produced from rho = (rho1 + rho2)/2 and
+// n = min(n1, n2), and m1 = m2 = m.
+//
+//
+// Parameters:
+//   X:            n1 x n2 data matrix.
+//   pooled:       pool the two axes into a single cut-off (see above).
+//   kappa, power: tuning constants (see above).
+//   m_max:        if >= 0, cap each m_k at min(m_max, n_k - 2); if < 0, ignore.
+//   Nh_normalize: passed through to naive_sample_cov().
+// Returns a list recording how the cut-off was reached: m1, m2 (int), rho1, rho2
+// (double, after clamping), lambda1_hat, lambda2_hat (double), n1, n2 (int),
+// kappa, power (double), pooled (bool).
+// [[Rcpp::export]]
+List select_m(NumericMatrix X,
+              bool pooled = false,
+              double kappa = 0.2,
+              double power = 0.7,
+              int m_max = -1,
+              bool Nh_normalize = true) {
+
+  int n1 = X.nrow();
+  int n2 = X.ncol();
+
+  if (n1 < 3)
+    stop("select_m: dimension 1 has size n1 = %d < 3; no admissible cut-off "
+         "exists (need n1 - 2 >= 1).", n1);
+  if (n2 < 3)
+    stop("select_m: dimension 2 has size n2 = %d < 3; no admissible cut-off "
+         "exists (need n2 - 2 >= 1).", n2);
+
+  double c0   = naive_sample_cov(X, NumericVector::create(0, 0), Nh_normalize);
+  double rho1 = naive_sample_cov(X, NumericVector::create(1, 0), Nh_normalize) / c0;
+  double rho2 = naive_sample_cov(X, NumericVector::create(0, 1), Nh_normalize) / c0;
+
+  auto cutoff = [&](double rho, int n_k, const char* dim,
+                    double& rho_used, double& lambda_used) -> int {
+    if (c0 <= 0.0 || rho <= 0.0 || !std::isfinite(rho)) {
+      Rcpp::warning("select_m: lag-one correlation for dimension %s is undefined "
+                    "(c0 <= 0 or rho non-positive/non-finite); falling back to "
+                    "m = 1.", dim);
+      rho_used    = rho;
+      lambda_used = NA_REAL;
+      return 1;
+    }
+    rho = std::min(std::max(rho, 1e-6), 1.0 - 1e-9);
+    rho_used = rho;
+    double lambda_hat = -1.0 / std::log(rho);
+    lambda_used = lambda_hat;
+    int m = static_cast<int>(std::lround(kappa * std::pow(n_k * lambda_hat, power)));
+    int upper = (m_max >= 0) ? std::min(m_max, n_k - 2) : (n_k - 2);
+    return std::max(1, std::min(m, upper));
+  };
+
+  int m1, m2;
+  double rho1_used, rho2_used, lambda1_hat, lambda2_hat;
+
+  if (pooled) {
+    int    n   = std::min(n1, n2);
+    double rho = 0.5 * (rho1 + rho2);
+    double rho_used, lambda_used;
+    int m = cutoff(rho, n, "pooled", rho_used, lambda_used);
+    m1 = m2 = m;
+    rho1_used   = rho2_used   = rho_used;
+    lambda1_hat = lambda2_hat = lambda_used;
+  } else {
+    m1 = cutoff(rho1, n1, "1", rho1_used, lambda1_hat);
+    m2 = cutoff(rho2, n2, "2", rho2_used, lambda2_hat);
+  }
+
+  return List::create(
+    Named("m1")          = m1,
+    Named("m2")          = m2,
+    Named("rho1")        = rho1_used,
+    Named("rho2")        = rho2_used,
+    Named("lambda1_hat") = lambda1_hat,
+    Named("lambda2_hat") = lambda2_hat,
+    Named("n1")          = n1,
+    Named("n2")          = n2,
+    Named("kappa")       = kappa,
+    Named("power")       = power,
+    Named("pooled")      = pooled
+  );
+}
+
+//-----------------------------------------------------------------------------
 // FULL EMPIRICAL GAMMA (n1-1) x (n2-1) MATRIX OF SAMPLE COVARIANCES
 //-----------------------------------------------------------------------------
 
@@ -253,6 +349,39 @@ List bias_corrected_estimator(NumericMatrix X, int m1, int m2 = -1,
     Named("n1")                 = n1,
     Named("n2")                 = n2
   );
+}
+
+
+//-----------------------------------------------------------------------------
+// fit_lattice_cov() = select_m() + bias_corrected_estimator()
+//-----------------------------------------------------------------------------
+// One-call automatic fit: pick the cut-off with select_m() and run
+// bias_corrected_estimator() at it. The cut-off is ALWAYS data-driven -- there
+// is deliberately no manual m argument here; to set m1/m2 by hand, call
+// bias_corrected_estimator() directly.
+// Parameters:
+//   X:            n1 x n2 data matrix.
+//   pooled:       forwarded to select_m() (single pooled cut-off for both axes).
+//   kappa, power: forwarded to select_m() (tuning constants of the rule).
+//   Nh_normalize: forwarded to both select_m() and bias_corrected_estimator().
+// Returns the bias_corrected_estimator() fit with the select_m() list appended
+// as m_selection, recording how the cut-off was reached.
+// [[Rcpp::export]]
+List fit_lattice_cov(NumericMatrix X,
+                     bool pooled = false,
+                     double kappa = 0.2,
+                     double power = 0.7,
+                     bool Nh_normalize = true) {
+
+  // Cut-off is always chosen by the selection rule.
+  List sel = select_m(X, pooled, kappa, power, -1, Nh_normalize);
+  int  m1  = as<int>(sel["m1"]);
+  int  m2  = as<int>(sel["m2"]);
+
+  // Copy the fit, then append the selection record.
+  List fit = bias_corrected_estimator(X, m1, m2, Nh_normalize);
+  fit["m_selection"] = sel;
+  return fit;
 }
 
 //-----------------------------------------------------------------------------

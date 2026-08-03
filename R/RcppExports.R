@@ -49,6 +49,10 @@ naive_sample_cov <- function(X, hvec, Nh_normalize = TRUE) {
     .Call(`_bclc_naive_sample_cov`, X, hvec, Nh_normalize)
 }
 
+select_m <- function(X, pooled = FALSE, kappa = 0.2, power = 0.7, m_max = -1L, Nh_normalize = TRUE) {
+    .Call(`_bclc_select_m`, X, pooled, kappa, power, m_max, Nh_normalize)
+}
+
 build_Gamma_naive <- function(X, Nh_normalize = TRUE) {
     .Call(`_bclc_build_Gamma_naive`, X, Nh_normalize)
 }
@@ -63,6 +67,10 @@ psd_project <- function(M) {
 
 bias_corrected_estimator <- function(X, m1, m2 = -1L, Nh_normalize = TRUE) {
     .Call(`_bclc_bias_corrected_estimator`, X, m1, m2, Nh_normalize)
+}
+
+fit_lattice_cov <- function(X, pooled = FALSE, kappa = 0.2, power = 0.7, Nh_normalize = TRUE) {
+    .Call(`_bclc_fit_lattice_cov`, X, pooled, kappa, power, Nh_normalize)
 }
 
 fit_to_Gamma <- function(fit, which = "corrected") {

@@ -173,6 +173,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// select_m
+List select_m(NumericMatrix X, bool pooled, double kappa, double power, int m_max, bool Nh_normalize);
+RcppExport SEXP _bclc_select_m(SEXP XSEXP, SEXP pooledSEXP, SEXP kappaSEXP, SEXP powerSEXP, SEXP m_maxSEXP, SEXP Nh_normalizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< bool >::type pooled(pooledSEXP);
+    Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
+    Rcpp::traits::input_parameter< double >::type power(powerSEXP);
+    Rcpp::traits::input_parameter< int >::type m_max(m_maxSEXP);
+    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(select_m(X, pooled, kappa, power, m_max, Nh_normalize));
+    return rcpp_result_gen;
+END_RCPP
+}
 // build_Gamma_naive
 NumericMatrix build_Gamma_naive(NumericMatrix X, bool Nh_normalize);
 RcppExport SEXP _bclc_build_Gamma_naive(SEXP XSEXP, SEXP Nh_normalizeSEXP) {
@@ -219,6 +235,21 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type m2(m2SEXP);
     Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
     rcpp_result_gen = Rcpp::wrap(bias_corrected_estimator(X, m1, m2, Nh_normalize));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit_lattice_cov
+List fit_lattice_cov(NumericMatrix X, bool pooled, double kappa, double power, bool Nh_normalize);
+RcppExport SEXP _bclc_fit_lattice_cov(SEXP XSEXP, SEXP pooledSEXP, SEXP kappaSEXP, SEXP powerSEXP, SEXP Nh_normalizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< bool >::type pooled(pooledSEXP);
+    Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
+    Rcpp::traits::input_parameter< double >::type power(powerSEXP);
+    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_lattice_cov(X, pooled, kappa, power, Nh_normalize));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -286,10 +317,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bclc_ModifiedExponentialCovariance", (DL_FUNC) &_bclc_ModifiedExponentialCovariance, 7},
     {"_bclc_build_true_Gamma", (DL_FUNC) &_bclc_build_true_Gamma, 5},
     {"_bclc_naive_sample_cov", (DL_FUNC) &_bclc_naive_sample_cov, 3},
+    {"_bclc_select_m", (DL_FUNC) &_bclc_select_m, 6},
     {"_bclc_build_Gamma_naive", (DL_FUNC) &_bclc_build_Gamma_naive, 2},
     {"_bclc_build_Sigma_naive", (DL_FUNC) &_bclc_build_Sigma_naive, 2},
     {"_bclc_psd_project", (DL_FUNC) &_bclc_psd_project, 1},
     {"_bclc_bias_corrected_estimator", (DL_FUNC) &_bclc_bias_corrected_estimator, 4},
+    {"_bclc_fit_lattice_cov", (DL_FUNC) &_bclc_fit_lattice_cov, 5},
     {"_bclc_fit_to_Gamma", (DL_FUNC) &_bclc_fit_to_Gamma, 2},
     {"_bclc_fit_to_Sigma", (DL_FUNC) &_bclc_fit_to_Sigma, 2},
     {"_bclc_cressiehawkins_semivariogram", (DL_FUNC) &_bclc_cressiehawkins_semivariogram, 3},

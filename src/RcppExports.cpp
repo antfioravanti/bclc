@@ -11,6 +11,76 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// psd_project
+arma::mat psd_project(arma::mat M);
+RcppExport SEXP _bclc_psd_project(SEXP MSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type M(MSEXP);
+    rcpp_result_gen = Rcpp::wrap(psd_project(M));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bias_corrected_estimator
+List bias_corrected_estimator(NumericMatrix X, int m1, int m2, bool Nh_normalize);
+RcppExport SEXP _bclc_bias_corrected_estimator(SEXP XSEXP, SEXP m1SEXP, SEXP m2SEXP, SEXP Nh_normalizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< int >::type m1(m1SEXP);
+    Rcpp::traits::input_parameter< int >::type m2(m2SEXP);
+    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(bias_corrected_estimator(X, m1, m2, Nh_normalize));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit_lattice_cov
+List fit_lattice_cov(NumericMatrix X, std::string method, bool pooled, double kappa, double eta, int K, bool Nh_normalize, IntegerVector cv_grid, int cv_block, int cv_shift, double cv_nugget);
+RcppExport SEXP _bclc_fit_lattice_cov(SEXP XSEXP, SEXP methodSEXP, SEXP pooledSEXP, SEXP kappaSEXP, SEXP etaSEXP, SEXP KSEXP, SEXP Nh_normalizeSEXP, SEXP cv_gridSEXP, SEXP cv_blockSEXP, SEXP cv_shiftSEXP, SEXP cv_nuggetSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< std::string >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< bool >::type pooled(pooledSEXP);
+    Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
+    Rcpp::traits::input_parameter< double >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< int >::type K(KSEXP);
+    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type cv_grid(cv_gridSEXP);
+    Rcpp::traits::input_parameter< int >::type cv_block(cv_blockSEXP);
+    Rcpp::traits::input_parameter< int >::type cv_shift(cv_shiftSEXP);
+    Rcpp::traits::input_parameter< double >::type cv_nugget(cv_nuggetSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_lattice_cov(X, method, pooled, kappa, eta, K, Nh_normalize, cv_grid, cv_block, cv_shift, cv_nugget));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit_to_Gamma
+NumericMatrix fit_to_Gamma(List fit, std::string which);
+RcppExport SEXP _bclc_fit_to_Gamma(SEXP fitSEXP, SEXP whichSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type fit(fitSEXP);
+    Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_to_Gamma(fit, which));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit_to_Sigma
+List fit_to_Sigma(List fit, std::string which);
+RcppExport SEXP _bclc_fit_to_Sigma(SEXP fitSEXP, SEXP whichSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type fit(fitSEXP);
+    Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_to_Sigma(fit, which));
+    return rcpp_result_gen;
+END_RCPP
+}
 // A_count
 int A_count(int n, int h, int r);
 RcppExport SEXP _bclc_A_count(SEXP nSEXP, SEXP hSEXP, SEXP rSEXP) {
@@ -160,6 +230,32 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cressiehawkins_semivariogram
+double cressiehawkins_semivariogram(NumericMatrix X, NumericVector hvec, bool Nh_normalize);
+RcppExport SEXP _bclc_cressiehawkins_semivariogram(SEXP XSEXP, SEXP hvecSEXP, SEXP Nh_normalizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type hvec(hvecSEXP);
+    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(cressiehawkins_semivariogram(X, hvec, Nh_normalize));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cressiehawkins_cov
+double cressiehawkins_cov(NumericMatrix X, NumericVector hvec, bool Nh_normalize);
+RcppExport SEXP _bclc_cressiehawkins_cov(SEXP XSEXP, SEXP hvecSEXP, SEXP Nh_normalizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type hvec(hvecSEXP);
+    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(cressiehawkins_cov(X, hvec, Nh_normalize));
+    return rcpp_result_gen;
+END_RCPP
+}
 // naive_sample_cov
 double naive_sample_cov(NumericMatrix X, NumericVector hvec, bool Nh_normalize);
 RcppExport SEXP _bclc_naive_sample_cov(SEXP XSEXP, SEXP hvecSEXP, SEXP Nh_normalizeSEXP) {
@@ -170,22 +266,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type hvec(hvecSEXP);
     Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
     rcpp_result_gen = Rcpp::wrap(naive_sample_cov(X, hvec, Nh_normalize));
-    return rcpp_result_gen;
-END_RCPP
-}
-// select_m
-List select_m(NumericMatrix X, bool pooled, double kappa, double power, int m_max, bool Nh_normalize);
-RcppExport SEXP _bclc_select_m(SEXP XSEXP, SEXP pooledSEXP, SEXP kappaSEXP, SEXP powerSEXP, SEXP m_maxSEXP, SEXP Nh_normalizeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< bool >::type pooled(pooledSEXP);
-    Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
-    Rcpp::traits::input_parameter< double >::type power(powerSEXP);
-    Rcpp::traits::input_parameter< int >::type m_max(m_maxSEXP);
-    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(select_m(X, pooled, kappa, power, m_max, Nh_normalize));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -213,98 +293,35 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// psd_project
-arma::mat psd_project(arma::mat M);
-RcppExport SEXP _bclc_psd_project(SEXP MSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type M(MSEXP);
-    rcpp_result_gen = Rcpp::wrap(psd_project(M));
-    return rcpp_result_gen;
-END_RCPP
-}
-// bias_corrected_estimator
-List bias_corrected_estimator(NumericMatrix X, int m1, int m2, bool Nh_normalize);
-RcppExport SEXP _bclc_bias_corrected_estimator(SEXP XSEXP, SEXP m1SEXP, SEXP m2SEXP, SEXP Nh_normalizeSEXP) {
+// select_m
+List select_m(NumericMatrix X, std::string method, bool pooled, double kappa, double eta, int K, int m_max, bool Nh_normalize, IntegerVector cv_grid, int cv_block, int cv_shift, double cv_nugget);
+RcppExport SEXP _bclc_select_m(SEXP XSEXP, SEXP methodSEXP, SEXP pooledSEXP, SEXP kappaSEXP, SEXP etaSEXP, SEXP KSEXP, SEXP m_maxSEXP, SEXP Nh_normalizeSEXP, SEXP cv_gridSEXP, SEXP cv_blockSEXP, SEXP cv_shiftSEXP, SEXP cv_nuggetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< int >::type m1(m1SEXP);
-    Rcpp::traits::input_parameter< int >::type m2(m2SEXP);
-    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(bias_corrected_estimator(X, m1, m2, Nh_normalize));
-    return rcpp_result_gen;
-END_RCPP
-}
-// fit_lattice_cov
-List fit_lattice_cov(NumericMatrix X, bool pooled, double kappa, double power, bool Nh_normalize);
-RcppExport SEXP _bclc_fit_lattice_cov(SEXP XSEXP, SEXP pooledSEXP, SEXP kappaSEXP, SEXP powerSEXP, SEXP Nh_normalizeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
+    Rcpp::traits::input_parameter< std::string >::type method(methodSEXP);
     Rcpp::traits::input_parameter< bool >::type pooled(pooledSEXP);
     Rcpp::traits::input_parameter< double >::type kappa(kappaSEXP);
-    Rcpp::traits::input_parameter< double >::type power(powerSEXP);
+    Rcpp::traits::input_parameter< double >::type eta(etaSEXP);
+    Rcpp::traits::input_parameter< int >::type K(KSEXP);
+    Rcpp::traits::input_parameter< int >::type m_max(m_maxSEXP);
     Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(fit_lattice_cov(X, pooled, kappa, power, Nh_normalize));
-    return rcpp_result_gen;
-END_RCPP
-}
-// fit_to_Gamma
-NumericMatrix fit_to_Gamma(List fit, std::string which);
-RcppExport SEXP _bclc_fit_to_Gamma(SEXP fitSEXP, SEXP whichSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type fit(fitSEXP);
-    Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
-    rcpp_result_gen = Rcpp::wrap(fit_to_Gamma(fit, which));
-    return rcpp_result_gen;
-END_RCPP
-}
-// fit_to_Sigma
-List fit_to_Sigma(List fit, std::string which);
-RcppExport SEXP _bclc_fit_to_Sigma(SEXP fitSEXP, SEXP whichSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< List >::type fit(fitSEXP);
-    Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
-    rcpp_result_gen = Rcpp::wrap(fit_to_Sigma(fit, which));
-    return rcpp_result_gen;
-END_RCPP
-}
-// cressiehawkins_semivariogram
-double cressiehawkins_semivariogram(NumericMatrix X, NumericVector hvec, bool Nh_normalize);
-RcppExport SEXP _bclc_cressiehawkins_semivariogram(SEXP XSEXP, SEXP hvecSEXP, SEXP Nh_normalizeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type hvec(hvecSEXP);
-    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(cressiehawkins_semivariogram(X, hvec, Nh_normalize));
-    return rcpp_result_gen;
-END_RCPP
-}
-// cressiehawkins_cov
-double cressiehawkins_cov(NumericMatrix X, NumericVector hvec, bool Nh_normalize);
-RcppExport SEXP _bclc_cressiehawkins_cov(SEXP XSEXP, SEXP hvecSEXP, SEXP Nh_normalizeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type hvec(hvecSEXP);
-    Rcpp::traits::input_parameter< bool >::type Nh_normalize(Nh_normalizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(cressiehawkins_cov(X, hvec, Nh_normalize));
+    Rcpp::traits::input_parameter< IntegerVector >::type cv_grid(cv_gridSEXP);
+    Rcpp::traits::input_parameter< int >::type cv_block(cv_blockSEXP);
+    Rcpp::traits::input_parameter< int >::type cv_shift(cv_shiftSEXP);
+    Rcpp::traits::input_parameter< double >::type cv_nugget(cv_nuggetSEXP);
+    rcpp_result_gen = Rcpp::wrap(select_m(X, method, pooled, kappa, eta, K, m_max, Nh_normalize, cv_grid, cv_block, cv_shift, cv_nugget));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_bclc_psd_project", (DL_FUNC) &_bclc_psd_project, 1},
+    {"_bclc_bias_corrected_estimator", (DL_FUNC) &_bclc_bias_corrected_estimator, 4},
+    {"_bclc_fit_lattice_cov", (DL_FUNC) &_bclc_fit_lattice_cov, 11},
+    {"_bclc_fit_to_Gamma", (DL_FUNC) &_bclc_fit_to_Gamma, 2},
+    {"_bclc_fit_to_Sigma", (DL_FUNC) &_bclc_fit_to_Sigma, 2},
     {"_bclc_A_count", (DL_FUNC) &_bclc_A_count, 3},
     {"_bclc_B_count", (DL_FUNC) &_bclc_B_count, 3},
     {"_bclc_D_count", (DL_FUNC) &_bclc_D_count, 2},
@@ -316,17 +333,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bclc_eval_true_cov", (DL_FUNC) &_bclc_eval_true_cov, 5},
     {"_bclc_ModifiedExponentialCovariance", (DL_FUNC) &_bclc_ModifiedExponentialCovariance, 7},
     {"_bclc_build_true_Gamma", (DL_FUNC) &_bclc_build_true_Gamma, 5},
-    {"_bclc_naive_sample_cov", (DL_FUNC) &_bclc_naive_sample_cov, 3},
-    {"_bclc_select_m", (DL_FUNC) &_bclc_select_m, 6},
-    {"_bclc_build_Gamma_naive", (DL_FUNC) &_bclc_build_Gamma_naive, 2},
-    {"_bclc_build_Sigma_naive", (DL_FUNC) &_bclc_build_Sigma_naive, 2},
-    {"_bclc_psd_project", (DL_FUNC) &_bclc_psd_project, 1},
-    {"_bclc_bias_corrected_estimator", (DL_FUNC) &_bclc_bias_corrected_estimator, 4},
-    {"_bclc_fit_lattice_cov", (DL_FUNC) &_bclc_fit_lattice_cov, 5},
-    {"_bclc_fit_to_Gamma", (DL_FUNC) &_bclc_fit_to_Gamma, 2},
-    {"_bclc_fit_to_Sigma", (DL_FUNC) &_bclc_fit_to_Sigma, 2},
     {"_bclc_cressiehawkins_semivariogram", (DL_FUNC) &_bclc_cressiehawkins_semivariogram, 3},
     {"_bclc_cressiehawkins_cov", (DL_FUNC) &_bclc_cressiehawkins_cov, 3},
+    {"_bclc_naive_sample_cov", (DL_FUNC) &_bclc_naive_sample_cov, 3},
+    {"_bclc_build_Gamma_naive", (DL_FUNC) &_bclc_build_Gamma_naive, 2},
+    {"_bclc_build_Sigma_naive", (DL_FUNC) &_bclc_build_Sigma_naive, 2},
+    {"_bclc_select_m", (DL_FUNC) &_bclc_select_m, 12},
     {NULL, NULL, 0}
 };
 

@@ -17,8 +17,8 @@ fit_to_Gamma <- function(fit, which = "corrected") {
     .Call(`_bclc_fit_to_Gamma`, fit, which)
 }
 
-fit_to_Sigma <- function(fit, which = "corrected") {
-    .Call(`_bclc_fit_to_Sigma`, fit, which)
+fit_to_Sigma <- function(fit, which = "corrected", psd = TRUE) {
+    .Call(`_bclc_fit_to_Sigma`, fit, which, psd)
 }
 
 A_count <- function(n, h, r) {

@@ -1145,6 +1145,198 @@ plot_metric_vs_norm_grid <- function(summary_df,
 #------------------------------------------------------------------------------
 # Publication-grade metric vs lag norm (faceted by lambda)
 #------------------------------------------------------------------------------
+
+# Colours for the ordered m-family. `palette_option` may be
+#   * a viridisLite option name ("viridis", "magma", ..., or "A".."H"),
+#   * a paletteer spec "package::palette" (e.g. "scico::berlin",
+#     "wesanderson::Zissou1"), which needs the paletteer package installed, or
+#   * a vector of colours to interpolate between (no extra dependency).
+# begin/end trim the light and dark ends of the ramp for every source alike.
+.m_palette <- function(palette_option, n, begin = 0, end = 1) {
+  if (n < 1) return(character(0))
+
+  if (length(palette_option) > 1) {
+    ramp <- palette_option                       # explicit colour vector
+  } else if (grepl("::", palette_option, fixed = TRUE)) {
+    if (!requireNamespace("paletteer", quietly = TRUE)) {
+      stop("palette_option \"", palette_option, "\" looks like a paletteer ",
+           "palette, but the paletteer package is not installed.\n",
+           "  install.packages(\"paletteer\")  - or pass a vector of colours ",
+           "instead, e.g. palette_option = c(\"#2166AC\", \"#B2182B\").",
+           call. = FALSE)
+    }
+    # Continuous palettes first; fall back to discrete ones (paletteer errors when
+    # a spec is not of the requested kind)
+    ramp <- tryCatch(
+      as.character(paletteer::paletteer_c(palette_option, n = 256)),
+      error = function(e) tryCatch(
+        as.character(paletteer::paletteer_d(palette_option)),
+        error = function(e2) stop("paletteer does not know the palette \"",
+                                  palette_option, "\" as either continuous or ",
+                                  "discrete. See paletteer::palettes_c_names ",
+                                  "and paletteer::palettes_d_names.",
+                                  call. = FALSE)
+      )
+    )
+  } else {
+    # viridisLite only warns and silently falls back to "viridis" for an unknown
+    # option, which quietly ignores the palette that was asked for
+    known <- c("magma", "inferno", "plasma", "viridis", "cividis",
+               "rocket", "mako", "turbo", LETTERS[1:8])
+    if (!palette_option %in% known) {
+      stop("Unknown palette_option \"", palette_option, "\".\n",
+           "  viridisLite names: ", paste(known[1:8], collapse = ", "),
+           " (or \"A\"..\"H\").\n",
+           "  For a palette from another package use the paletteer form ",
+           "\"package::palette\", e.g. \"colorBlindness::", palette_option,
+           "\".\n  Or pass a vector of colours, e.g. c(\"#DEEBF7\", \"#08306B\").",
+           call. = FALSE)
+    }
+    # viridisLite applies begin/end itself
+    return(viridisLite::viridis(n, option = palette_option,
+                                begin = begin, end = end))
+  }
+
+  # Trim, then interpolate to the number of m values
+  dense <- grDevices::colorRampPalette(ramp)(256)
+  lo <- max(1, floor(begin * 255) + 1)
+  hi <- min(256, ceiling(end * 255) + 1)
+  if (hi < lo) hi <- lo
+  grDevices::colorRampPalette(dense[lo:hi])(n)
+}
+
+# Column names + display label of one metric, for a given normalization.
+.norm_metric_cols <- function(metric, normalization) {
+  n_suffix <- if (normalization == "N") "_N" else ""
+  if (metric == "bias") {
+    list(original = paste0("bias", n_suffix),
+         corrected = paste0("biasCorr", n_suffix),
+         CH = "biasCH", label = "Bias")
+  } else if (metric == "MSE") {
+    list(original = paste0("MSEChat", n_suffix),
+         corrected = paste0("MSEChatCorr", n_suffix),
+         CH = "MSECH", label = "MSE")
+  } else if (metric == "Var") {
+    list(original = paste0("VarChat", n_suffix),
+         corrected = paste0("VarChatCorr", n_suffix),
+         CH = "VarCH", label = "Variance")
+  } else {
+    stop("metric must be one of: 'bias', 'MSE', 'Var'")
+  }
+}
+
+# Long-format plotting data for ONE metric: Naive benchmark + corrected (all m or
+# best m) + Cressie-Hawkins rows, tagged with `metric` / `metric_label`. Shared by
+# the single-metric and the stacked (bias row over MSE row) layouts of
+# plot_metric_vs_norm_publication().
+.norm_metric_long <- function(df_filtered, metric, normalization, lambda_values,
+                              best_m_only, show_CH, CH_clip_factor,
+                              max_lag_norm = NULL) {
+  cols <- .norm_metric_cols(metric, normalization)
+  for (nm in c(cols$original, cols$corrected)) {
+    if (!nm %in% names(df_filtered)) {
+      stop(sprintf("Column '%s' not found in data (metric = '%s', normalization = '%s').",
+                   nm, metric, normalization))
+    }
+  }
+  has_CH <- show_CH && cols$CH %in% names(df_filtered)
+
+  df_plot <- df_filtered %>%
+    dplyr::mutate(
+      lag_norm = sqrt(h1^2 + h2^2),
+      # Use expression-friendly labels
+      lambda_label = factor(
+        lambda,
+        levels = lambda_values,
+        labels = paste0("lambda == ", lambda_values)
+      )
+    ) %>%
+    dplyr::group_by(lambda, lambda_label, m, lag_norm) %>%
+    dplyr::summarise(
+      original_metric = mean(.data[[cols$original]], na.rm = TRUE),
+      corrected_metric = mean(.data[[cols$corrected]], na.rm = TRUE),
+      CH_metric = if (has_CH) mean(.data[[cols$CH]], na.rm = TRUE) else NA_real_,
+      .groups = "drop"
+    )
+
+  # Cut the long lags out of the data rather than zooming the axis, so the free y
+  # scales are computed from what is actually visible
+  if (!is.null(max_lag_norm)) {
+    df_plot <- df_plot %>% dplyr::filter(lag_norm <= max_lag_norm)
+    if (nrow(df_plot) == 0) {
+      stop("max_lag_norm = ", max_lag_norm, " leaves no lags to plot.")
+    }
+  }
+
+  # Benchmark data
+  df_benchmark <- df_plot %>%
+    dplyr::group_by(lambda, lambda_label, lag_norm) %>%
+    dplyr::summarise(
+      benchmark_value = first(original_metric),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(estimator = "Naïve")
+
+  m_values <- sort(unique(df_plot$m))
+
+  # Corrected estimator data: one curve per m, or the best m per (lambda, lag)
+  if (best_m_only) {
+    df_corrected <- df_plot %>%
+      dplyr::group_by(lambda, lambda_label, lag_norm) %>%
+      dplyr::slice_min(order_by = abs(corrected_metric), n = 1, with_ties = FALSE) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(estimator = "Best m")
+  } else {
+    df_corrected <- df_plot %>%
+      dplyr::mutate(estimator = paste0("m = ", m))
+  }
+
+  # Combine for unified legend
+  df_combined <- dplyr::bind_rows(
+    df_benchmark %>%
+      dplyr::rename(y_value = benchmark_value) %>%
+      dplyr::select(lambda, lambda_label, lag_norm, y_value, estimator),
+    df_corrected %>%
+      dplyr::rename(y_value = corrected_metric) %>%
+      dplyr::select(lambda, lambda_label, lag_norm, y_value, estimator, m)
+  )
+
+  # Cressie-Hawkins data (if requested and available)
+  if (has_CH) {
+    df_CH <- df_plot %>%
+      dplyr::group_by(lambda, lambda_label, lag_norm) %>%
+      dplyr::summarise(
+        CH_value = first(CH_metric),
+        .groups = "drop"
+      ) %>%
+      dplyr::mutate(estimator = "CH")
+
+    # For MSE: clip CH points that exceed CH_clip_factor * naive value
+    if (metric == "MSE") {
+      df_CH <- df_CH %>%
+        dplyr::left_join(
+          df_benchmark %>% dplyr::select(lambda, lag_norm, benchmark_value),
+          by = c("lambda", "lag_norm")
+        ) %>%
+        dplyr::filter(CH_value <= CH_clip_factor * benchmark_value) %>%
+        dplyr::select(-benchmark_value)
+    }
+
+    df_combined <- dplyr::bind_rows(
+      df_combined,
+      df_CH %>%
+        dplyr::rename(y_value = CH_value) %>%
+        dplyr::select(lambda, lambda_label, lag_norm, y_value, estimator)
+    )
+  }
+
+  df_combined$metric       <- metric
+  df_combined$metric_label <- cols$label
+
+  list(df = df_combined, m_values = m_values, has_CH = has_CH,
+       y_label = cols$label)
+}
+
 plot_metric_vs_norm_publication <- function(
     summary_df,
     N_filter,
@@ -1152,6 +1344,7 @@ plot_metric_vs_norm_publication <- function(
     metric = "bias",
     normalization = "Nh",
     max_m = NULL,
+    max_lag_norm = NULL,  # Drop every lag with ||h|| beyond this (e.g. 10) instead of zooming, so the free y scales follow the visible lags
     best_m_only = FALSE,
     show_CH = FALSE,
     CH_color = "#E41A1C",
@@ -1165,22 +1358,42 @@ plot_metric_vs_norm_publication <- function(
     font_scale = 1,  # Multiplier for all text sizes (axis labels, titles, legend, facet strips)
     line_size = 0.6,
     point_size = 1.8,
+    show_points = TRUE,  # FALSE: lines only, no dot/triangle markers (legend keys become plain lines). Note that use_bw = TRUE with all m relies on the markers to tell the m-curves apart
+    m_points = TRUE,  # FALSE: markers only on Naive (dots) and CH (triangles), none on the m-curves - the readable choice when many m are drawn
+    m_line_size = NULL,  # Linewidth of the m-curves; NULL = line_size. Try ~0.35 for the all-m figures so the references stand out
+    m_point_size = NULL,  # Marker size of the m-curves; NULL = point_size
+    naive_point_size = NULL,  # Marker size of the Naive dots; NULL = point_size. ~1.0 keeps the curve from reading as a bead chain over ~50 lags
+    CH_point_size = NULL,  # Marker size of the Cressie-Hawkins triangles; NULL = point_size
+    m_show = NULL,  # Draw only these m values, e.g. c(1, 3, 5, 7, 9); NULL = all. Halving the number of curves is the single biggest legibility win
+    label_m_extremes = FALSE,  # Print "m=<lowest>" / "m=<highest>" at the right end of those two curves, so the ramp direction is readable off the panel instead of off a long legend. Ignored when best_m_only = TRUE
+    palette_begin = 0,  # Trim the palette: raise begin so no m-curve comes out near-black and collides with a black Naive
+    palette_end = 0.9,  # Lower end so no m-curve comes out near-white
     use_bw = FALSE,  # Black & white friendly with shapes
     show_title = FALSE,  # Often not needed in papers
     legend_position = "right",
     facet_ncol = 2,  # Number of facet columns; set to length(lambda_values) (e.g. 4) for a single row
     legend_nrow = NULL,  # Rows for a bottom legend; NULL = auto. With many m's, keep small (e.g. 2) so it doesn't overflow a 1-row layout
-    palette_option = "viridis",  # viridis palette: "viridis", "plasma", "magma", "inferno", "cividis"
-    CH_clip_factor = 1.5  # For MSE: drop CH points exceeding this factor times the naive value
+    palette_option = "viridis",  # Colours for the m-curves: a viridisLite name ("viridis", "magma", "inferno", "plasma", "cividis", "rocket", "mako", "turbo", or "A".."H"), a paletteer spec "package::palette" (e.g. "scico::berlin", needs the paletteer package), or a vector of colours to interpolate. Ignored when use_bw = TRUE
+    CH_clip_factor = 1.5,  # For MSE: drop CH points exceeding this factor times the naive value
+    stack_metrics = FALSE,  # TRUE: one figure with a row per metric (bias on top, MSE below) and a column per lambda. Overrides facet_ncol; `metric` may be a vector to choose/order the rows (default c("bias", "MSE"))
+    stack_independent_y = FALSE  # Only with stack_metrics: TRUE gives every panel its own y range; FALSE (default) shares the y range within each metric row
 ) {
-  
+
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-  
+
   # Validate normalization parameter
   if (!normalization %in% c("Nh", "N")) {
     stop("normalization must be either 'Nh' or 'N'")
   }
-  
+
+  # Which metrics become rows: a single panel row (the classic layout) or one row
+  # per metric stacked on top of each other, sharing the lambda columns.
+  if (stack_metrics) {
+    metrics_to_plot <- if (length(metric) > 1) metric else c("bias", "MSE")
+  } else {
+    metrics_to_plot <- metric[1]
+  }
+
   # Compute scaled font sizes
   sz_axis_title  <- base_size * font_scale        # Axis names (x, y labels)
   sz_axis_text   <- (base_size - 1) * font_scale  # Axis tick labels (numbers/letters)
@@ -1188,30 +1401,8 @@ plot_metric_vs_norm_publication <- function(
   sz_legend_text  <- (base_size - 1) * font_scale  # Legend entries
   sz_strip_text   <- base_size * font_scale        # Facet strip labels
   
-  # Construct column names based on metric and normalization
-  n_suffix <- if (normalization == "N") "_N" else ""
-  
-  if (metric == "bias") {
-    col_original <- paste0("bias", n_suffix)
-    col_corrected <- paste0("biasCorr", n_suffix)
-    col_CH <- "biasCH"
-    y_label <- "Bias"
-  } else if (metric == "MSE") {
-    col_original <- paste0("MSEChat", n_suffix)
-    col_corrected <- paste0("MSEChatCorr", n_suffix)
-    col_CH <- "MSECH"
-    y_label <- "MSE"
-  } else if (metric == "Var") {
-    col_original <- paste0("VarChat", n_suffix)
-    col_corrected <- paste0("VarChatCorr", n_suffix)
-    col_CH <- "VarCH"
-    y_label <- "Variance"
-  } else {
-    stop("metric must be one of: 'bias', 'MSE', 'Var'")
-  }
-  
   #if (normalization == "N") y_label <- paste0(y_label, " (N-normalized)")
-  
+
   # Filter data
   df_filtered <- summary_df %>%
     dplyr::filter(N == N_filter, lambda %in% lambda_values)
@@ -1221,120 +1412,82 @@ plot_metric_vs_norm_publication <- function(
     df_filtered <- df_filtered %>%
       dplyr::filter(m <= max_m)
   }
-  
+
+  # Keep only selected m values. The Naive and CH columns are constant across m,
+  # so this thins the m-family without touching the two reference curves.
+  if (!is.null(m_show)) {
+    df_filtered <- df_filtered %>%
+      dplyr::filter(m %in% m_show)
+    if (nrow(df_filtered) == 0) {
+      stop("m_show selected no rows; available m: ",
+           paste(sort(unique(summary_df$m)), collapse = ", "))
+    }
+  }
+
+  # Resolve the per-series styling defaults
+  if (is.null(m_line_size))      m_line_size      <- line_size
+  if (is.null(m_point_size))     m_point_size     <- point_size
+  if (is.null(naive_point_size)) naive_point_size <- point_size
+  if (is.null(CH_point_size))    CH_point_size    <- point_size
+
   if (nrow(df_filtered) == 0) {
     stop("No data found for the specified N and lambda filters.")
   }
   
-  # Prepare data
-  df_plot <- df_filtered %>%
-    dplyr::mutate(
-      lag_norm = sqrt(h1^2 + h2^2),
-      # Use expression-friendly labels
-      lambda_label = factor(
-        lambda,
-        levels = lambda_values,
-        labels = paste0("lambda == ", lambda_values)
-      )
-    ) %>%
-    dplyr::group_by(lambda, lambda_label, m, lag_norm) %>%
-    dplyr::summarise(
-      original_metric = mean(.data[[col_original]], na.rm = TRUE),
-      corrected_metric = mean(.data[[col_corrected]], na.rm = TRUE),
-      CH_metric = if (col_CH %in% names(df_filtered)) mean(.data[[col_CH]], na.rm = TRUE) else NA_real_,
-      .groups = "drop"
-    )
-  
-  # Benchmark data
-  df_benchmark <- df_plot %>%
-    dplyr::group_by(lambda, lambda_label, lag_norm) %>%
-    dplyr::summarise(
-      benchmark_value = first(original_metric),
-      .groups = "drop"
-    ) %>%
-    dplyr::mutate(
-      estimator = "Naïve",
-      m_factor = factor("Naïve")
-    )
-  
-  # Corrected estimator data
-  m_values <- sort(unique(df_plot$m))
-  
-  # If best_m_only, select the m that minimizes the corrected metric for each (lambda, lag_norm)
-  if (best_m_only) {
-    df_corrected <- df_plot %>%
-      dplyr::group_by(lambda, lambda_label, lag_norm) %>%
-      dplyr::slice_min(order_by = abs(corrected_metric), n = 1, with_ties = FALSE) %>%
-      dplyr::ungroup() %>%
-      dplyr::mutate(
-        estimator = "Best m",
-        m_factor = factor("Best m")
-      )
-    m_values <- "best"  # Placeholder for legend
-  } else {
-    df_corrected <- df_plot %>%
-      dplyr::mutate(
-        estimator = paste0("m = ", m),
-        m_factor = factor(paste0("m = ", m), levels = paste0("m = ", m_values))
-      )
-  }
-  
-  # Cressie-Hawkins data (if requested)
-  if (show_CH && col_CH %in% names(df_filtered)) {
-    df_CH <- df_plot %>%
-      dplyr::group_by(lambda, lambda_label, lag_norm) %>%
-      dplyr::summarise(
-        CH_value = first(CH_metric),
-        .groups = "drop"
-      ) %>%
-      dplyr::mutate(
-        estimator = "CH",
-        m_factor = factor("CH")
-      )
-    
-    # For MSE: clip CH points that exceed CH_clip_factor * naive value
-    if (metric == "MSE") {
-      df_CH <- df_CH %>%
-        dplyr::left_join(
-          df_benchmark %>% dplyr::select(lambda, lag_norm, benchmark_value),
-          by = c("lambda", "lag_norm")
-        ) %>%
-        dplyr::filter(CH_value <= CH_clip_factor * benchmark_value) %>%
-        dplyr::select(-benchmark_value)
+  # Prepare data: one long-format block per metric row, then stack them
+  parts <- lapply(metrics_to_plot, function(met) {
+    .norm_metric_long(df_filtered, met, normalization, lambda_values,
+                      best_m_only = best_m_only, show_CH = show_CH,
+                      CH_clip_factor = CH_clip_factor,
+                      max_lag_norm = max_lag_norm)
+  })
+  names(parts) <- metrics_to_plot
+
+  df_combined <- dplyr::bind_rows(lapply(parts, `[[`, "df"))
+  has_CH      <- any(vapply(parts, `[[`, logical(1), "has_CH"))
+  y_labels    <- vapply(parts, `[[`, character(1), "y_label")
+  y_label     <- y_labels[[1]]
+
+  # Metric rows in the requested order (labels are parseable, so label_parsed
+  # renders them as plain text next to the lambda expressions)
+  df_combined$metric_label <- factor(df_combined$metric_label, levels = y_labels)
+
+  # Drop m values that have no finite entry anywhere in this figure. m = n - 1 makes
+  # W*_m singular, so the summary carries it as all-NaN; keeping it would add a
+  # legend entry (and a palette slot) for a curve that is never drawn.
+  if (!best_m_only && any(!is.na(df_combined$m))) {
+    finite_m <- df_combined %>%
+      dplyr::filter(!is.na(m)) %>%
+      dplyr::group_by(m) %>%
+      dplyr::summarise(any_finite = any(is.finite(y_value)), .groups = "drop")
+    drop_m <- finite_m$m[!finite_m$any_finite]
+    if (length(drop_m)) {
+      message("plot_metric_vs_norm_publication(): no finite values for m = ",
+              paste(drop_m, collapse = ", "), " - dropping from the figure.")
+      df_combined <- df_combined %>%
+        dplyr::filter(is.na(m) | !m %in% drop_m)
     }
   }
-  
-  # Combine for unified legend
-  df_combined <- dplyr::bind_rows(
-    df_benchmark %>% 
-      dplyr::rename(y_value = benchmark_value) %>%
-      dplyr::select(lambda, lambda_label, lag_norm, y_value, estimator, m_factor),
-    df_corrected %>% 
-      dplyr::rename(y_value = corrected_metric) %>%
-      dplyr::select(lambda, lambda_label, lag_norm, y_value, estimator, m_factor, m)
-  )
-  
-  # Add CH if requested
-  if (show_CH && col_CH %in% names(df_filtered)) {
-    df_combined <- dplyr::bind_rows(
-      df_combined,
-      df_CH %>%
-        dplyr::rename(y_value = CH_value) %>%
-        dplyr::select(lambda, lambda_label, lag_norm, y_value, estimator, m_factor)
-    )
+
+  # m values present (placeholder level when only the best m is drawn)
+  if (best_m_only) {
+    m_values <- "best"
+  } else {
+    m_values <- sort(unique(df_combined$m[!is.na(df_combined$m)]))
   }
-  
+
   # Create estimator factor with proper ordering
   if (best_m_only) {
     all_levels <- c("Naïve", "Best m")
   } else {
     all_levels <- c("Naïve", paste0("m = ", m_values))
   }
-  if (show_CH && col_CH %in% names(df_filtered)) {
+  if (has_CH) {
     all_levels <- c(all_levels, "CH")
   }
   df_combined$estimator <- factor(df_combined$estimator, levels = all_levels)
-  
+  df_combined$m_factor  <- df_combined$estimator   # kept for backward compatibility
+
   # Define aesthetics based on use_bw
   n_estimators <- length(all_levels)
   
@@ -1345,7 +1498,8 @@ plot_metric_vs_norm_publication <- function(
       linetypes <- c("solid", "dashed")
       shapes <- c(16, 17)
     } else {
-      colors <- c(naive_color, viridis(1, option = palette_option, begin = 0.5))
+      mid <- (palette_begin + palette_end) / 2
+      colors <- c(naive_color, .m_palette(palette_option, 1, mid, mid))
       linetypes <- c("solid", "solid")
       shapes <- c(16, 17)
     }
@@ -1379,8 +1533,9 @@ plot_metric_vs_norm_publication <- function(
     names(shapes) <- all_levels
     
   } else {
-    # Color version with viridis palette
-    colors <- c(naive_color, viridis(length(m_values), option = palette_option, end = 0.9))
+    # Colour version: viridis name, paletteer spec, or an explicit colour vector
+    colors <- c(naive_color, .m_palette(palette_option, length(m_values),
+                                        palette_begin, palette_end))
     linetypes <- c("solid", rep("solid", length(m_values)))
     shapes <- c(16, rep(16, length(m_values)))
     
@@ -1396,26 +1551,73 @@ plot_metric_vs_norm_publication <- function(
     names(shapes) <- all_levels
   }
   
+  # Panel columns: lambda values when stacking metrics, facet_ncol otherwise.
+  # When stacking, the metric names label the rows, so the y axis title is dropped.
+  n_facet_cols <- if (stack_metrics) length(lambda_values) else facet_ncol
+  y_axis_label <- if (stack_metrics) NULL else y_label
+
+  # With markers on the references only, blank the m-family shapes so the legend
+  # keys show exactly what is drawn (a shape of NA draws no marker in the key)
+  if (show_points && !m_points) {
+    shapes[setdiff(all_levels, c("Naïve", "CH"))] <- NA
+  }
+
+  # Split the series into the ordered m-family and the two reference estimators, so
+  # the references can be drawn last (on top) with their own weight and markers
+  # instead of being buried under a dozen overlapping m-curves.
+  ref_levels <- intersect(c("CH", "Naïve"), all_levels)   # CH first, Naïve on top
+  df_family <- df_combined %>% dplyr::filter(!estimator %in% ref_levels)
+  df_CH     <- df_combined %>% dplyr::filter(estimator == "CH")
+  df_naive  <- df_combined %>% dplyr::filter(estimator == "Naïve")
+
+  # Direct labels for the lowest and highest m curves, in the left margin. With an
+  # ordered family, reading "which line is which" off the curve beats matching a
+  # colour against a nine-entry legend. The left edge (lag norm 0) is where the
+  # family fans out furthest, so labels there collide least.
+  df_label <- NULL
+  if (label_m_extremes && !best_m_only && nrow(df_family) &&
+      any(!is.na(df_family$m))) {
+    keep_m <- range(df_family$m, na.rm = TRUE)
+    df_label <- df_family %>%
+      # High m can be NaN at the shortest lags, and a label on a missing y is
+      # silently dropped - anchor each label to the curve's first finite point
+      dplyr::filter(m %in% keep_m, is.finite(y_value)) %>%
+      dplyr::group_by(metric_label, lambda_label, estimator) %>%
+      dplyr::slice_min(order_by = lag_norm, n = 1, with_ties = FALSE) %>%
+      dplyr::ungroup()
+  }
+
   # Build the plot
-  p <- ggplot(df_combined, aes(x = lag_norm, y = y_value, 
-                               color = estimator, 
+  p <- ggplot(df_combined, aes(x = lag_norm, y = y_value,
+                               color = estimator,
                                linetype = estimator,
                                shape = estimator)) +
-    # Lines
-    geom_line(aes(group = estimator), linewidth = line_size) +
-    # Points
-    geom_point(size = point_size) +
-    # Facets with parsed labels (for Greek lambda)
-    facet_wrap(~ lambda_label, ncol = facet_ncol, scales = "free_y",
-               labeller = label_parsed) +
-    # Scales
-    scale_color_manual(values = colors, name = "Estimator") +
-    scale_linetype_manual(values = linetypes, name = "Estimator") +
-    scale_shape_manual(values = shapes, name = "Estimator") +
+    # m-family: thin lines, optional (small) markers. ggplot2 >= 3.5 draws legend
+    # keys per layer, so each key ends up showing exactly its own curve's weight.
+    geom_line(data = df_family, aes(group = estimator), linewidth = m_line_size) +
+    (if (show_points && m_points)
+      geom_point(data = df_family, size = m_point_size) else NULL) +
+    # Reference estimators, each its own layer so line weight and marker size are
+    # tunable per series. CH first, Naive last, so Naive ends up on top.
+    (if (nrow(df_CH)) geom_line(data = df_CH, linewidth = line_size) else NULL) +
+    (if (show_points && nrow(df_CH))
+      geom_point(data = df_CH, size = CH_point_size) else NULL) +
+    geom_line(data = df_naive, linewidth = line_size) +
+    (if (show_points) geom_point(data = df_naive, size = naive_point_size) else NULL) +
+    # Direct labels on the outermost m-curves, just left of the panel content
+    (if (!is.null(df_label))
+      geom_text(data = df_label, aes(label = paste0("m=", m)),
+                hjust = 1.15, vjust = 0.4, show.legend = FALSE,
+                size = (base_size - 3) * font_scale / .pt) else NULL) +
+    # Scales. `breaks` pins the legend order to Naive -> m ... -> CH; without it the
+    # keys would follow the layer order above (family first) instead.
+    scale_color_manual(values = colors, breaks = all_levels, name = "Estimator") +
+    scale_linetype_manual(values = linetypes, breaks = all_levels, name = "Estimator") +
+    scale_shape_manual(values = shapes, breaks = all_levels, name = "Estimator") +
     # Labels
     labs(
       x = "Lag norm",
-      y = y_label
+      y = y_axis_label
     ) +
     # Publication theme
     theme_bw(base_size = base_size) +
@@ -1446,18 +1648,57 @@ plot_metric_vs_norm_publication <- function(
       # Margins
       plot.margin = margin(t = 10, r = 10, b = 10, l = 10)
     )
-  
-  # Add horizontal line at 0 for bias
-  if (metric == "bias") {
-    p <- p + geom_hline(yintercept = 0, linetype = "dotted", 
-                        color = "gray50", linewidth = 0.4)
+
+  # Room on the left for the direct labels so they are not clipped
+  if (!is.null(df_label)) {
+    p <- p + scale_x_continuous(expand = expansion(mult = c(0.16, 0.03)))
   }
-  
+
+  # Facets with parsed labels (for Greek lambda)
+  if (stack_metrics) {
+    if (stack_independent_y) {
+      # facet_wrap over metric x lambda: every panel gets its own y range, at the
+      # price of repeating the metric name in each panel strip
+      p <- p + facet_wrap(~ metric_label + lambda_label, ncol = n_facet_cols,
+                          scales = "free_y", labeller = label_parsed)
+    } else {
+      # facet_grid: metric rows, lambda columns. The row strip sits on the left of
+      # the axis and so reads as the y-axis title; the y range is shared within a row.
+      p <- p + facet_grid(metric_label ~ lambda_label, scales = "free_y",
+                          switch = "y",
+                          labeller = labeller(lambda_label = label_parsed,
+                                              metric_label = label_value)) +
+        theme(strip.placement = "outside",
+              strip.text.y.left = element_text(size = sz_strip_text, angle = 90,
+                                               margin = margin(r = 5)))
+    }
+  } else {
+    p <- p + facet_wrap(~ lambda_label, ncol = n_facet_cols, scales = "free_y",
+                        labeller = label_parsed)
+  }
+
+  # Add horizontal line at 0 for bias (only in the bias row when metrics are stacked)
+  if ("bias" %in% metrics_to_plot) {
+    if (stack_metrics) {
+      df_zero <- data.frame(
+        metric_label = factor("Bias", levels = levels(df_combined$metric_label)),
+        y_zero = 0
+      )
+      p <- p + geom_hline(data = df_zero, aes(yintercept = y_zero),
+                          inherit.aes = FALSE, linetype = "dotted",
+                          color = "gray50", linewidth = 0.4)
+    } else {
+      p <- p + geom_hline(yintercept = 0, linetype = "dotted",
+                          color = "gray50", linewidth = 0.4)
+    }
+  }
+
   # Add title if requested
   if (show_title) {
-    p <- p + ggtitle(bquote(.(y_label) ~ "vs lag norm for" ~ N == .(N_filter) %*% .(N_filter)))
+    title_metric <- paste(y_labels, collapse = " and ")
+    p <- p + ggtitle(bquote(.(title_metric) ~ "vs lag norm for" ~ N == .(N_filter) %*% .(N_filter)))
   }
-  
+
   # Adjust legend layout based on position
   if (legend_position == "bottom") {
     # A single row overflows when many m-levels are shown (e.g. all m plus
@@ -1466,7 +1707,7 @@ plot_metric_vs_norm_publication <- function(
     if (!is.null(legend_nrow)) {
       n_rows <- legend_nrow
     } else {
-      per_row <- facet_ncol + 1
+      per_row <- n_facet_cols + 1
       n_rows <- max(1, ceiling(n_estimators / per_row))
     }
     p <- p + guides(
@@ -1484,10 +1725,10 @@ plot_metric_vs_norm_publication <- function(
   
   # Build filename
   if (is.null(filename)) {
-    metric_tag <- paste0(metric, "_", normalization)
+    metric_tag <- paste0(paste(metrics_to_plot, collapse = "_"), "_", normalization)
     if (best_m_only) metric_tag <- paste0(metric_tag, "_bestm")
     if (show_CH) metric_tag <- paste0(metric_tag, "_withCH")
-    filename <- sprintf("%s_vs_norm_N%d_publication.png", 
+    filename <- sprintf("%s_vs_norm_N%d_publication.png",
                         tolower(metric_tag), N_filter)
   }
   

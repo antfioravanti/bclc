@@ -77,17 +77,23 @@ matrix (zero outside the `m`-window) together with its nearest-PSD projection:
 ```r
 Gamma <- fit_to_Gamma(fit)          # (2m1+1) x (2m2+1) lag matrix, rows = h1, cols = h2
 
-Sig <- fit_to_Sigma(fit)            # list with two N x N matrices:
-Sig$Sigma_hat_m_O                   #   plug-in field covariance (not guaranteed PSD)
-Sig$Sigma_hat_m_O_psd               #   nearest-PSD projection (a valid covariance)
+Sig <- fit_to_Sigma(fit)            # psd = TRUE by default
+Sig$Sigma_hat_m                     #   N x N field covariance, PSD-projected
+is_psd(Sig$Sigma_hat_m)             # TRUE
 
-is_psd(Sig$Sigma_hat_m_O_psd)       # TRUE
+raw <- fit_to_Sigma(fit, "corrected", psd = FALSE)
+raw$Sigma_hat_m                     #   same estimator, NOT projected (may be indefinite)
+raw$psd_applied                     # FALSE
 ```
 
-Both helpers default to the corrected estimate; pass `which = "naive"` to reshape the
-uncorrected (tapered) lag vector instead. The PSD projection is done inside
-`fit_to_Sigma()`, but `psd_project()` and `is_psd()` remain exported if you need them
-directly.
+The key is always `Sigma_hat_m`: `psd` changes what that matrix *is*, never which name
+to read. Never branch on `psd` to choose a field — pass the flag through and read the
+one name. `psd_applied` echoes the argument back for a caller holding only the result.
+
+Both helpers default to the corrected estimate; pass `which = "truncated"` to reshape the
+uncorrected (tapered) lag vector instead. The projection is an `O(N^3)`
+eigendecomposition, so pass `psd = FALSE` when the raw plug-in is what you are
+studying; `psd_project()` and `is_psd()` remain exported if you need them directly.
 
 ## Notation and conventions
 
@@ -110,7 +116,7 @@ a non-separable one.
 | `simulate_lattice_process()` | Simulate one Gaussian realisation on the lattice. |
 | `bias_corrected_estimator()` | Main estimator: data → naive and corrected autocovariances. |
 | `fit_to_Gamma()` | Fit → `(2m1+1) × (2m2+1)` lag matrix. |
-| `fit_to_Sigma()` | Fit → N×N field covariance and its nearest-PSD projection. |
+| `fit_to_Sigma()` | Fit → N×N field covariance, optionally with its nearest-PSD projection (`psd`). |
 | `build_count_matrices()` | 1D overlap-count matrices for one grid dimension. |
 | `build_weights()` | Build `W_m` / `W*_m` from the count matrices (per-dimension cut-offs). |
 

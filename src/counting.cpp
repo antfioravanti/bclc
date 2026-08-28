@@ -10,32 +10,43 @@
 #include <algorithm>
 #include <cmath>
 
-
 //-----------------------------------------------------------------------------
 // Scalar counting factors A, B, D
 //-----------------------------------------------------------------------------
 
-// Count of (i, t) pairs producing lag r in the A-term).
+// Count of (i, t) pairs producing lag r in the A-term.
+// Parameters:
+//   n:    size of the spatial dimension.
+//   h, r: lag and summation lag.
+// Returns max(0, n - max(|r|, |h|, |r+h|)).
 // [[Rcpp::export]]
 int A_count(int n, int h, int r) {
   int val = n - std::max({std::abs(r), std::abs(h), std::abs(r + h)});
-  int A_nrh = val > 0 ? val : 0; // condition ? if true : if false
-  return A_nrh; 
+  int A_nrh = val > 0 ? val : 0;
+  return A_nrh;
 }
 
-// Count of (i, t) pairs producing lag r in the B-term .
+// Count of (i, t) pairs producing lag r in the B-term.
+// Parameters:
+//   n:    size of the spatial dimension.
+//   h, r: lag and summation lag.
+// Returns max(0, n - max(|r|, |h|, |r-h|)).
 // [[Rcpp::export]]
 int B_count(int n, int h, int r) {
   int val = n - std::max({std::abs(r), std::abs(h), std::abs(r - h)});
-  int B_nrh = val > 0 ? val : 0; // condition ? if true : if false
+  int B_nrh = val > 0 ? val : 0;
   return B_nrh;
 }
 
 // Count of (t1, t2) pairs producing lag r in the D-term.
+// Parameters:
+//   n: size of the spatial dimension.
+//   r: summation lag.
+// Returns max(0, n - |r|).
 // [[Rcpp::export]]
 int D_count(int n, int r) {
   int val = n - std::abs(r);
-  int D_r = val > 0 ? val : 0; // condition ? if true : if false
+  int D_r = val > 0 ? val : 0;
   return D_r;
 }
 
@@ -44,20 +55,18 @@ int D_count(int n, int r) {
 // COUNTING MATRICES A, B, D, DELTA AND THEIR NORMALIZED VERSIONS
 //-----------------------------------------------------------------------------
 
-  // Builds a list containing:
-  //   A, B, D: L x L matrices of raw counts for the A, B, D terms.
-  //   A_norm, B_norm, D_norm: L x L matrices of normalised counts for the A, B, D terms.
-  //   Delta: length-L Bartlett window diagonal (n_k - |h|)/n_k.
-  //   L: the size of the lag grid (L = 2*n_k - 1).
-  // Parameters:
-  //   n_k: size of the spatial dimension (number of grid points).
-  //     counts are always the standard N_h version (see note in the body).
+// Build the 1D counting matrices over the lag grid {-(n_k-1),...,(n_k-1)}
+// (rows = h, cols = r). Always the standard N_h normalisation; the prefactor
+// choice is applied downstream in build_weights().
+// Parameters:
+//   n_k: size of the spatial dimension.
+// Returns:
+//   A, B, D:                L x L raw counts; I: L x L identity.
+//   A_norm, B_norm, D_norm: N_h-normalised counts.
+//   Delta, Delta_mat:       Bartlett window (n_k-|h|)/n_k, as vector and diagonal.
+//   L:                      lag-grid size, L = 2*n_k - 1.
 // [[Rcpp::export]]
 List build_count_matrices(int n_k) {
-  // Nh_normalize is accepted for API compatibility. This builder always emits
-  // the standard N_h-normalised A_norm/B_norm/D_norm plus the Bartlett window
-  // Delta; the prefactor choice is applied downstream in build_W_m().
-
 
   // Size of the lag grid
   int L = 2 * n_k - 1;
@@ -127,14 +136,12 @@ List build_count_matrices(int n_k) {
 //  SELECTION MATRICES FOR THE BIAS-CORRECTED ESTIMATOR
 //-----------------------------------------------------------------------------
 
-// P_m: M x L selection matrix; (M = 2m+1), (L = 2n_k-1) 
-// picking the central lags {-m,...,m}
-// out of the full lag grid {-(n_k-1),...,(n_k-1)} (L = 2*n_k - 1).
-// (rows) p=1,..., M; (cols) q=1,...,L.
-// Entry is 1 at q = ceil(L/2) - m + p - 1, and 0 otherwise.
+// P_m: picks the central lags {-m,...,m} out of the full grid; row p has a
+// single 1 at q = ceil(L/2) - m + p - 1 (1-based).
 // Parameters:
 //   L: size of the full lag grid (L = 2*n_k - 1).
-//   m: truncation cut-off; selects the central lags {-m,...,m} (0 <= m <= n_k-1).
+//   m: truncation cut-off (0 <= m <= n_k-1).
+// Returns the M x L selection matrix, M = 2m+1.
 // [[Rcpp::export]]
 arma::mat build_Pm(int L, int m) {
   int M = 2 * m + 1;  // number of selected lags
@@ -149,19 +156,13 @@ arma::mat build_Pm(int L, int m) {
 }
 
 //-----------------------------------------------------------------------------
-// P^c_m: K x L complement selection matrix; (M = 2m+1), (L = 2n_k-1),
-// K = L - M = 2*(n_k - m - 1). 
-// Picks the OUTER lags: everything in the full grid {-(n_k-1),...,(n_k-1)} 
-// EXCEPT the central block {-m,...,m}.
-// (rows) p = 1,...,K; (cols) q = 1,...,L. Per eq. (partition_matrix_c):
-//   q = p,       for p = 1,...,n_k - m - 1   (lags left of the central block),
-//   q = p + M,   for p = n_k - m,...,K       (lags right of the central block),
-//   0 otherwise.
-// The +M shift on the right branch skips over the M removed central columns.
+// P^c_m: complement of P_m -- picks the OUTER lags, i.e. the full grid minus
+// the central block {-m,...,m}. Row p has a single 1 at q = p (left of the
+// block) or q = p + M (right of it, the shift skipping the M removed columns).
 // Parameters:
 //   L: size of the full lag grid (L = 2*n_k - 1).
-//   m: truncation cut-off; the central block {-m,...,m} is the part REMOVED
-//      (0 <= m <= n_k-1). K = L - (2m+1) = 2*(n_k-m-1) outer lags remain.
+//   m: truncation cut-off; the central block is the part REMOVED.
+// Returns the K x L selection matrix, K = L - (2m+1) = 2*(n_k-m-1).
 // [[Rcpp::export]]
 arma::mat build_Pmc(int L, int m) {
   int n_k = (L + 1) / 2;                 // recover grid size from L = 2n_k - 1
@@ -181,17 +182,13 @@ arma::mat build_Pmc(int L, int m) {
 }
 
 //-----------------------------------------------------------------------------
-// S_m: (M1*M2) x (L1*L2) selection matrix for lags in 
-// {-m1,...,m1} x {-m2,...,m2} out of 
-// {-(n1-1),...,(n1-1)} x {-(n2-1),...,(n2-1)}, 
-// with Mi = 2*mi + 1.
-//   Returns the (M1*M2) x (L1*L2) selection matrix S_m = kron(P2, P1).
-//   Allows a different cut-off per dimension (m1, m2); m2 defaults to m1.
+// S_m: 2D selection matrix picking the lags {-m1,...,m1} x {-m2,...,m2} out of
+// the full grid.
 // Parameters:
-//   L1: size of the dimension-1 lag grid (L1 = 2*n1 - 1).
-//   L2: size of the dimension-2 lag grid (L2 = 2*n2 - 1).
-//   m1: cut-off for dimension 1; selects {-m1,...,m1} (0 <= m1 <= n1-1).
-//   m2: cut-off for dimension 2; selects {-m2,...,m2}. Default -1 => m2 = m1.
+//   L1, L2: lag-grid sizes, Li = 2*ni - 1.
+//   m1:     cut-off for dimension 1.
+//   m2:     cut-off for dimension 2. Default -1 => m2 = m1.
+// Returns S_m = kron(P2, P1), of size (M1*M2) x (L1*L2), Mi = 2*mi + 1.
 // [[Rcpp::export]]
 arma::mat build_Sm(int L1, int L2, int m1, int m2 = -1) {
   if (m2 < 0) m2 = m1;                   // default: same cut-off in both dims
@@ -201,19 +198,17 @@ arma::mat build_Sm(int L1, int L2, int m1, int m2 = -1) {
 }
 
 //-----------------------------------------------------------------------------
-// Full and truncated weight matrices W, W*, W_m, W*_m for the bias-corrected
-// estimator.
-//
-//   Builds the FULL weight matrices over the whole lag grid (size L1*L2) by
-//   Kronecker products of the 1D count factors (dimension 2 (x) dimension 1),
-//   then TRUNCATES to the central window with the selection matrix
+// Weight matrices for the bias-corrected estimator: the FULL W over the whole
+// lag grid, built by Kronecker products of the 1D count factors (dim 2 (x) dim
+// 1), then TRUNCATED to the central window as W_m = S_m W S_m'.
 // Parameters:
-//   mat1: output of build_count_matrices(n1) (dimension 1).
-//   mat2: output of build_count_matrices(n2) (dimension 2).
-//   m1:   truncation cut-off for dimension 1; lags {-m1,...,m1}.
-//   m2:   truncation cut-off for dimension 2; lags {-m2,...,m2}. Default -1 => m2 = m1.
-//   Nh_normalize: TRUE = standard 1/N_h; FALSE = constant 1/N
-// Returns a list with the full W, W_star and the truncated W_m, W_star_m.
+//   mat1, mat2:   outputs of build_count_matrices(n1) and (n2).
+//   m1, m2:       truncation cut-offs per dimension. Default -1 => m2 = m1.
+//   Nh_normalize: TRUE = standard 1/N_h; FALSE = constant 1/N (Bartlett window
+//                 as leading block).
+// Returns:
+//   W, W_star:     full unnormalised / normalised weight matrices.
+//   W_m, W_star_m: their truncations to the central window.
 // [[Rcpp::export]]
 List build_weights(List mat1, List mat2, int m1, int m2 = -1,
                bool Nh_normalize = true) {

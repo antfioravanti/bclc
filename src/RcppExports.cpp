@@ -70,14 +70,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // fit_to_Sigma
-List fit_to_Sigma(List fit, std::string which);
-RcppExport SEXP _bclc_fit_to_Sigma(SEXP fitSEXP, SEXP whichSEXP) {
+List fit_to_Sigma(List fit, std::string which, bool psd);
+RcppExport SEXP _bclc_fit_to_Sigma(SEXP fitSEXP, SEXP whichSEXP, SEXP psdSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type fit(fitSEXP);
     Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
-    rcpp_result_gen = Rcpp::wrap(fit_to_Sigma(fit, which));
+    Rcpp::traits::input_parameter< bool >::type psd(psdSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_to_Sigma(fit, which, psd));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -321,7 +322,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bclc_bias_corrected_estimator", (DL_FUNC) &_bclc_bias_corrected_estimator, 4},
     {"_bclc_fit_lattice_cov", (DL_FUNC) &_bclc_fit_lattice_cov, 11},
     {"_bclc_fit_to_Gamma", (DL_FUNC) &_bclc_fit_to_Gamma, 2},
-    {"_bclc_fit_to_Sigma", (DL_FUNC) &_bclc_fit_to_Sigma, 2},
+    {"_bclc_fit_to_Sigma", (DL_FUNC) &_bclc_fit_to_Sigma, 3},
     {"_bclc_A_count", (DL_FUNC) &_bclc_A_count, 3},
     {"_bclc_B_count", (DL_FUNC) &_bclc_B_count, 3},
     {"_bclc_D_count", (DL_FUNC) &_bclc_D_count, 2},

@@ -173,8 +173,8 @@ static double cv_score_m(NumericMatrix X, int m1, int m2,
   if (m1 > n1 - 2 || m2 > n2 - 2) return NA_REAL;   // W*_m not admissible
 
   List fit   = bias_corrected_estimator(X, m1, m2, Nh_normalize);
-  List Sig   = fit_to_Sigma(fit, "corrected");
-  arma::mat Sigma = as<arma::mat>(Sig["Sigma_hat_m_O_psd"]);
+  List Sig   = fit_to_Sigma(fit, "corrected", true);   // CV needs the PSD one
+  arma::mat Sigma = as<arma::mat>(Sig["Sigma_hat_m"]);
 
   double total = 0.0; int used = 0;
   for (std::size_t k = 0; k < folds.size(); ++k) {

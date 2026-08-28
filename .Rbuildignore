@@ -5,3 +5,4 @@
 ^\.RDataTmp$
 ^\.RData$
 ^\.Rhistory$
+^src/build_so\.sh$

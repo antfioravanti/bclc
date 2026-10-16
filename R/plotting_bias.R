@@ -1350,28 +1350,28 @@ plot_metric_vs_norm_publication <- function(
     height = 6,
     dpi = 600,  
     base_size = 11,
-    font_scale = 1,
+    font_scale = 1,  # Multiplier for all text sizes (axis labels, titles, legend, facet strips)
     line_size = 0.6,
     point_size = 1.8,
-    show_points = TRUE,
-    m_points = TRUE,
-    m_line_size = NULL,
-    m_point_size = NULL,
-    naive_point_size = NULL,
-    CH_point_size = NULL,
-    m_show = NULL,
-    label_m_extremes = FALSE,
-    palette_begin = 0,
-    palette_end = 0.9,
-    use_bw = FALSE,
-    show_title = FALSE,
+    show_points = TRUE,  # FALSE: lines only, no dot/triangle markers (legend keys become plain lines). Note that use_bw = TRUE with all m relies on the markers to tell the m-curves apart
+    m_points = TRUE,  # FALSE: markers only on Naive (dots) and CH (triangles), none on the m-curves - the readable choice when many m are drawn
+    m_line_size = NULL,  # Linewidth of the m-curves; NULL = line_size. Try ~0.35 for the all-m figures so the references stand out
+    m_point_size = NULL,  # Marker size of the m-curves; NULL = point_size
+    naive_point_size = NULL,  # Marker size of the Naive dots; NULL = point_size. ~1.0 keeps the curve from reading as a bead chain over ~50 lags
+    CH_point_size = NULL,  # Marker size of the Cressie-Hawkins triangles; NULL = point_size
+    m_show = NULL,  # Draw only these m values, e.g. c(1, 3, 5, 7, 9); NULL = all. Halving the number of curves is the single biggest legibility win
+    label_m_extremes = FALSE,  # Print "m=<lowest>" / "m=<highest>" at the right end of those two curves, so the ramp direction is readable off the panel instead of off a long legend. Ignored when best_m_only = TRUE
+    palette_begin = 0,  # Trim the palette: raise begin so no m-curve comes out near-black and collides with a black Naive
+    palette_end = 0.9,  # Lower end so no m-curve comes out near-white
+    use_bw = FALSE,  # Black & white friendly with shapes
+    show_title = FALSE,  # Often not needed in papers
     legend_position = "right",
-    facet_ncol = 2,
-    legend_nrow = NULL,
-    palette_option = "viridis",
-    CH_clip_factor = 1.5,
-    stack_metrics = FALSE,
-    stack_independent_y = FALSE
+    facet_ncol = 2,  # Number of facet columns; set to length(lambda_values) (e.g. 4) for a single row
+    legend_nrow = NULL,  # Rows for a bottom legend; NULL = auto. With many m's, keep small (e.g. 2) so it doesn't overflow a 1-row layout
+    palette_option = "viridis",  # Colours for the m-curves: a viridisLite name ("viridis", "magma", "inferno", "plasma", "cividis", "rocket", "mako", "turbo", or "A".."H"), a paletteer spec "package::palette" (e.g. "scico::berlin", needs the paletteer package), or a vector of colours to interpolate. Ignored when use_bw = TRUE
+    CH_clip_factor = 1.5,  # For MSE: drop CH points exceeding this factor times the naive value
+    stack_metrics = FALSE,  # TRUE: one figure with a row per metric (bias on top, MSE below) and a column per lambda. Overrides facet_ncol; `metric` may be a vector to choose/order the rows (default c("bias", "MSE"))
+    stack_independent_y = FALSE  # Only with stack_metrics: TRUE gives every panel its own y range; FALSE (default) shares the y range within each metric row
 ) {
 
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
@@ -1546,8 +1546,7 @@ plot_metric_vs_norm_publication <- function(
     names(shapes) <- all_levels
   }
   
-  # Panel columns: lambda values when stacking metrics, facet_ncol otherwise.
-  # When stacking, the metric names label the rows, so the y axis title is dropped.
+
   n_facet_cols <- if (stack_metrics) length(lambda_values) else facet_ncol
   y_axis_label <- if (stack_metrics) NULL else y_label
 
@@ -1557,18 +1556,13 @@ plot_metric_vs_norm_publication <- function(
     shapes[setdiff(all_levels, c("Naïve", "CH"))] <- NA
   }
 
-  # Split the series into the ordered m-family and the two reference estimators, so
-  # the references can be drawn last (on top) with their own weight and markers
-  # instead of being buried under a dozen overlapping m-curves.
+
   ref_levels <- intersect(c("CH", "Naïve"), all_levels)   # CH first, Naïve on top
   df_family <- df_combined %>% dplyr::filter(!estimator %in% ref_levels)
   df_CH     <- df_combined %>% dplyr::filter(estimator == "CH")
   df_naive  <- df_combined %>% dplyr::filter(estimator == "Naïve")
 
-  # Direct labels for the lowest and highest m curves, in the left margin. With an
-  # ordered family, reading "which line is which" off the curve beats matching a
-  # colour against a nine-entry legend. The left edge (lag norm 0) is where the
-  # family fans out furthest, so labels there collide least.
+
   df_label <- NULL
   if (label_m_extremes && !best_m_only && nrow(df_family) &&
       any(!is.na(df_family$m))) {
@@ -1587,25 +1581,21 @@ plot_metric_vs_norm_publication <- function(
                                color = estimator,
                                linetype = estimator,
                                shape = estimator)) +
-    # m-family: thin lines, optional (small) markers. ggplot2 >= 3.5 draws legend
-    # keys per layer, so each key ends up showing exactly its own curve's weight.
+
     geom_line(data = df_family, aes(group = estimator), linewidth = m_line_size) +
     (if (show_points && m_points)
       geom_point(data = df_family, size = m_point_size) else NULL) +
-    # Reference estimators, each its own layer so line weight and marker size are
-    # tunable per series. CH first, Naive last, so Naive ends up on top.
+
     (if (nrow(df_CH)) geom_line(data = df_CH, linewidth = line_size) else NULL) +
     (if (show_points && nrow(df_CH))
       geom_point(data = df_CH, size = CH_point_size) else NULL) +
     geom_line(data = df_naive, linewidth = line_size) +
     (if (show_points) geom_point(data = df_naive, size = naive_point_size) else NULL) +
-    # Direct labels on the outermost m-curves, just left of the panel content
     (if (!is.null(df_label))
       geom_text(data = df_label, aes(label = paste0("m=", m)),
                 hjust = 1.15, vjust = 0.4, show.legend = FALSE,
                 size = (base_size - 3) * font_scale / .pt) else NULL) +
-    # Scales. `breaks` pins the legend order to Naive -> m ... -> CH; without it the
-    # keys would follow the layer order above (family first) instead.
+
     scale_color_manual(values = colors, breaks = all_levels, name = "Estimator") +
     scale_linetype_manual(values = linetypes, breaks = all_levels, name = "Estimator") +
     scale_shape_manual(values = shapes, breaks = all_levels, name = "Estimator") +
@@ -1652,13 +1642,11 @@ plot_metric_vs_norm_publication <- function(
   # Facets with parsed labels (for Greek lambda)
   if (stack_metrics) {
     if (stack_independent_y) {
-      # facet_wrap over metric x lambda: every panel gets its own y range, at the
-      # price of repeating the metric name in each panel strip
+
       p <- p + facet_wrap(~ metric_label + lambda_label, ncol = n_facet_cols,
                           scales = "free_y", labeller = label_parsed)
     } else {
-      # facet_grid: metric rows, lambda columns. The row strip sits on the left of
-      # the axis and so reads as the y-axis title; the y range is shared within a row.
+
       p <- p + facet_grid(metric_label ~ lambda_label, scales = "free_y",
                           switch = "y",
                           labeller = labeller(lambda_label = label_parsed,
@@ -1696,9 +1684,6 @@ plot_metric_vs_norm_publication <- function(
 
   # Adjust legend layout based on position
   if (legend_position == "bottom") {
-    # A single row overflows when many m-levels are shown (e.g. all m plus
-    # Naïve/CH on a 4-panel-wide layout). Wrap the legend over several rows so
-    # it stays within the figure width. Aim for ~ (#facets + 1) entries per row.
     if (!is.null(legend_nrow)) {
       n_rows <- legend_nrow
     } else {
@@ -1774,16 +1759,7 @@ plot_mse_ratio_heatmap_grid <- function(
     axes_all = FALSE,
     panel_axis_titles = FALSE
 ) {
-  # value    "ratio" fills with MSEChatCorr / MSEChat, centred on 1 (the
-  #          historical behaviour). "pct" fills with the signed percent change
-  #          (ratio - 1) * 100, centred on 0, so a REDUCTION carries a minus
-  #          sign in the legend exactly as it already does in the cell labels.
-  # axes_all TRUE draws the h1 / h2 tick labels on every panel instead of only
-  #          on the outer margins.
-  # panel_axis_titles TRUE gives every panel its own "h1" / "h2" axis TITLES.
-  #          A facetted plot has one pair of titles for the whole figure, so
-  #          this builds one plot per lambda and lays them out with patchwork;
-  #          the result is a patchwork object, still printable and ggsave-able.
+
   value <- match.arg(value)
   if (panel_axis_titles && !requireNamespace("patchwork", quietly = TRUE))
     stop("panel_axis_titles = TRUE needs the 'patchwork' package: ",
@@ -1884,13 +1860,9 @@ plot_mse_ratio_heatmap_grid <- function(
                         val_tag, N_filter)
   }
   
-  # The fill is the ratio or the signed percent change; the cell labels are the
-  # signed percent change either way.
   fill_var <- if (value == "pct") "pct_change" else "mse_ratio"
 
-  # Fill scale: on the ratio scale the neutral point is 1, on the percent scale
-  # it is 0 and a reduction is negative. A fresh scale object per panel, so the
-  # per-lambda plots never share one.
+
   if (value == "pct") {
     fill_limits <- (scale_limits - 1) * 100
     fill_mid    <- 0
@@ -1928,8 +1900,7 @@ plot_mse_ratio_heatmap_grid <- function(
       panel.spacing = ggplot2::unit(1, "lines")
     )
 
-  # One heatmap, over whatever subset it is handed. Used for the whole grid
-  # (then facetted) and for a single lambda (then laid out by patchwork).
+
   build_panel <- function(dat, cross_dat) {
     q <- ggplot2::ggplot(dat, ggplot2::aes(x = factor(h1), y = factor(h2),
                                            fill = .data[[fill_var]])) +
@@ -1960,8 +1931,7 @@ plot_mse_ratio_heatmap_grid <- function(
   }
 
   if (panel_axis_titles) {
-    # One plot per lambda, so each keeps its own h1 / h2 axis titles; the lambda
-    # label becomes the panel title and the shared legend is collected once.
+
     lvls <- levels(droplevels(df_plot$lambda_label))
     panels <- lapply(lvls, function(lv) {
       build_panel(df_plot[df_plot$lambda_label == lv, , drop = FALSE],
@@ -1972,14 +1942,13 @@ plot_mse_ratio_heatmap_grid <- function(
     })
     p <- patchwork::wrap_plots(panels, ncol = ncol, guides = "collect")
   } else {
-    # axes = "all" repeats the h1 / h2 tick labels (not titles) on every panel.
+
     p <- build_panel(df_plot, df_cross) +
       ggplot2::facet_wrap(~ lambda_label, ncol = ncol,
                           labeller = ggplot2::label_parsed,
                           axes = if (axes_all) "all" else "margins")
   }
 
-  # Save (PNG only -- this project never produces PDF plots)
   out_path_png <- file.path(out_dir, sub("\\.pdf$", ".png", filename))
 
   ggplot2::ggsave(out_path_png, plot = p, width = width, height = height, dpi = dpi, bg = "white")
@@ -2008,8 +1977,6 @@ plot_best_m_heatmap <- function(summary_df,
                                 palette_direction = -1,
                                 show_legend = TRUE,
                                 tick_every = NULL) {
-  # tick_every: show axis labels every N lags (NULL = auto based on grid size).
-  #             Always shows the extreme lags and zero.
   
   norm_type <- match.arg(normalization)
   
@@ -2045,7 +2012,7 @@ plot_best_m_heatmap <- function(summary_df,
   }
   out_path <- file.path(out_dir, filename)
   
-  # Check MSEZeroEst column exists
+
   if (!mse_zero_col %in% names(df_lam)) {
     warning(sprintf("Column '%s' not found; X overlay will be skipped.", mse_zero_col))
     df_lam[[mse_zero_col]] <- NA
@@ -2053,10 +2020,10 @@ plot_best_m_heatmap <- function(summary_df,
   
   grid_hh <- df_lam %>% dplyr::distinct(h1, h2)
   
-  # Filter to rows where correction reduces MSE
+
   df_reduced <- df_lam %>% dplyr::filter(.data[[mse_reduced_col]])
   
-  # Find best m (smallest MSE of corrected estimator) per (h1, h2)
+
   df_best <- df_reduced %>%
     dplyr::group_by(h1, h2) %>%
     dplyr::arrange(.data[[mse_corr_col]], .data$m, .by_group = TRUE) %>%
@@ -2068,7 +2035,6 @@ plot_best_m_heatmap <- function(summary_df,
       best_MSE = .data[[mse_corr_col]]
     )
   
-  # For each (h1, h2): get the naive MSE and zero MSE (constant across m, take first)
   df_ref <- df_lam %>%
     dplyr::group_by(h1, h2) %>%
     dplyr::slice(1) %>%
@@ -2083,10 +2049,7 @@ plot_best_m_heatmap <- function(summary_df,
     dplyr::left_join(df_best, by = c("h1", "h2")) %>%
     dplyr::left_join(df_ref, by = c("h1", "h2"))
   
-  # Determine the "best available" MSE per cell:
-  #   - If correction helped: min(best_MSE, naive_MSE)  (best_MSE should be < naive)
-  #   - If no correction helped (grey): naive_MSE
-  # Then X-mark if zero_MSE < best_available
+
   df_plot <- df_plot %>%
     dplyr::mutate(
       best_available_MSE = dplyr::if_else(

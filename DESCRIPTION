@@ -22,4 +22,5 @@ Imports:
     viridisLite,
     fields
 Suggests:
-    paletteer
+    paletteer,
+    patchwork

@@ -3,7 +3,7 @@
 \name{simulate_lattice_process}
 \alias{simulate_lattice_process}
 \title{Simulate a single realisation of a zero-mean Gaussian process on an
-n1 x n2 lattice using the modified exponential covariance model.}
+n1 x n2 lattice.}
 \usage{
 simulate_lattice_process(
   n1,
@@ -14,21 +14,44 @@ simulate_lattice_process(
   lambda1 = 1,
   lambda2 = 1,
   beta = 0,
-  seed = NULL
+  seed = NULL,
+  model = "modexp",
+  separable = FALSE,
+  nu = 0.5,
+  delta = 1,
+  tol = 1e-06
 )
 }
 \arguments{
-\item{n1, }{n2   Grid dimensions.}
+\item{n1, n2}{Grid dimensions.}
 
 \item{sigma}{Variance parameter (C(0,0) = sigma^2).}
 
-\item{alpha1, }{alpha2  Smoothness parameters (positive).}
+\item{alpha1, alpha2}{Smoothness parameters, in (0, 2].}
 
-\item{lambda1, }{lambda2  Scale parameters (positive).}
+\item{lambda1, lambda2}{Scale parameters (positive). Enters as
+|h|^alpha / lambda, so lambda absorbs the power: a classical Matern of
+range L is alpha = 2, lambda = L^2.}
 
-\item{beta}{Separability parameter (0 = separable).}
+\item{beta}{Separability parameter of the non-separable form (>= 0);
+ignored when separable = TRUE.}
 
 \item{seed}{Random seed for reproducibility (NULL = no seed).}
+
+\item{model}{Covariance model: "modexp" (default), "matern" or
+"gencauchy".}
+
+\item{separable}{If TRUE, C is the product of the two per-dimension
+covariances; if FALSE (default), the non-separable form coupled by beta.
+Both are positive definite by construction.}
+
+\item{nu}{Matern smoothness (> 0), used when model = "matern".}
+
+\item{delta}{Tail exponent (> 0), used when model = "gencauchy"; C decays
+as |h_k|^(-alpha_k * delta).}
+
+\item{tol}{Tolerance passed to MASS::mvrnorm. Smooth Matern fields on a
+fine lattice give a near-singular Sigma and may need this loosened.}
 }
 \value{
 A list with components:
@@ -39,5 +62,5 @@ A list with components:
 }
 \description{
 Simulate a single realisation of a zero-mean Gaussian process on an
-n1 x n2 lattice using the modified exponential covariance model.
+n1 x n2 lattice.
 }

@@ -18,40 +18,53 @@ generate_grid <- function(n1, n2 = n1) {
 # SIMULATION OF GAUSSIAN PROCESSES ON THE LATTICE
 
 #' Simulate a single realisation of a zero-mean Gaussian process on an
-#' n1 x n2 lattice using the modified exponential covariance model.
+#' n1 x n2 lattice.
 #'
-#' @param n1, n2   Grid dimensions.
+#' @param n1,n2   Grid dimensions.
+#' @param model    Covariance model: "modexp" (default) or "gencauchy".
 #' @param sigma    Variance parameter (C(0,0) = sigma^2).
-#' @param alpha1, alpha2  Smoothness parameters (positive).
-#' @param lambda1, lambda2  Scale parameters (positive).
-#' @param beta     Separability parameter (0 = separable).
+#' @param alpha1,alpha2  Smoothness parameters, in (0, 2]. alpha2 defaults to
+#'   alpha1.
+#' @param lambda1,lambda2  Range parameters (positive). 
+#'   lambda2 defaults to lambda1.
+#' @param beta     Separability parameter: beta = 0 gives the separable
+#'   model, beta > 0 the non-separable one.
+#' @param delta    Tail parameter (> 0), used when model = "gencauchy".
 #' @param seed     Random seed for reproducibility (NULL = no seed).
+#' @param tol      Tolerance passed to MASS::mvrnorm.
 #' @return  A list with components:
 #'   \item{X}{n1 x n2 matrix of simulated values.}
 #'   \item{grid}{Data frame of grid coordinates.}
 #'   \item{Sigma}{N x N true covariance matrix used for simulation.}
 #'   \item{params}{Named list of model parameters.}
-simulate_lattice_process <- function(n1, n2 = n1,
+simulate_lattice_process <- function(n1, n2 = n1, model   = "modexp",
                                      sigma   = 1,
-                                     alpha1  = 1, alpha2  = 1,
-                                     lambda1 = 1, lambda2 = 1,
+                                     alpha1  = 1, alpha2  = alpha1,
+                                     lambda1 = 1, lambda2 = lambda1,
                                      beta    = 0,
-                                     seed    = NULL) {
+                                     delta   = 1,
+                                     seed    = NULL,
+                                     tol     = 1e-6) {
 
   grid  <- generate_grid(n1, n2)
-  Sigma <- ModifiedExponentialCovariance(grid, sigma = sigma,
-                                         alpha1 = alpha1, alpha2 = alpha2,
-                                         lambda1 = lambda1, lambda2 = lambda2,
-                                         beta = beta)
+  Sigma <- build_true_Sigma(c(n1, n2),
+                            beta    = beta,
+                            lambdas = c(lambda1, lambda2),
+                            alphas  = c(alpha1, alpha2),
+                            sigma   = sigma,
+                            model   = model,
+                            delta   = delta)
 
   if (!is.null(seed)) set.seed(seed)
-  z <- MASS::mvrnorm(n = 1, mu = rep(0, nrow(grid)), Sigma = Sigma)
+  z <- MASS::mvrnorm(n = 1, mu = rep(0, nrow(grid)), Sigma = Sigma, tol = tol)
   X <- matrix(z, nrow = n1, ncol = n2)
 
   params <- list(n1 = n1, n2 = n2, sigma = sigma,
                  alpha1 = alpha1, alpha2 = alpha2,
                  lambda1 = lambda1, lambda2 = lambda2,
-                 beta = beta)
+                 beta = beta,
+                 model = model,
+                 delta = delta)
 
   list(X = X, grid = grid, Sigma = Sigma, params = params)
 }

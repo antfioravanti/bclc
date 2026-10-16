@@ -1,6 +1,6 @@
 #------------------------------------------------------------------------------
 # Author: Antonio Fioravanti
-# Result heatmaps and line plots over a summary_df keyed by (N, lambda, m, h1, h2).
+# Result heatmaps and line plots over a summary_df keyed by N, lambda, m, h1, h2.
 #------------------------------------------------------------------------------
 
 # Needed packages:
@@ -1143,15 +1143,13 @@ plot_metric_vs_norm_grid <- function(summary_df,
 }
 
 #------------------------------------------------------------------------------
-# Publication-grade metric vs lag norm (faceted by lambda)
+# grade metric vs lag norm 
 #------------------------------------------------------------------------------
 
 # Colours for the ordered m-family. `palette_option` may be
 #   * a viridisLite option name ("viridis", "magma", ..., or "A".."H"),
 #   * a paletteer spec "package::palette" (e.g. "scico::berlin",
-#     "wesanderson::Zissou1"), which needs the paletteer package installed, or
-#   * a vector of colours to interpolate between (no extra dependency).
-# begin/end trim the light and dark ends of the ramp for every source alike.
+#     "wesanderson::Zissou1"), 
 .m_palette <- function(palette_option, n, begin = 0, end = 1) {
   if (n < 1) return(character(0))
 
@@ -1165,8 +1163,7 @@ plot_metric_vs_norm_grid <- function(summary_df,
            "instead, e.g. palette_option = c(\"#2166AC\", \"#B2182B\").",
            call. = FALSE)
     }
-    # Continuous palettes first; fall back to discrete ones (paletteer errors when
-    # a spec is not of the requested kind)
+
     ramp <- tryCatch(
       as.character(paletteer::paletteer_c(palette_option, n = 256)),
       error = function(e) tryCatch(
@@ -1179,8 +1176,7 @@ plot_metric_vs_norm_grid <- function(summary_df,
       )
     )
   } else {
-    # viridisLite only warns and silently falls back to "viridis" for an unknown
-    # option, which quietly ignores the palette that was asked for
+
     known <- c("magma", "inferno", "plasma", "viridis", "cividis",
                "rocket", "mako", "turbo", LETTERS[1:8])
     if (!palette_option %in% known) {
@@ -1192,7 +1188,7 @@ plot_metric_vs_norm_grid <- function(summary_df,
            "\".\n  Or pass a vector of colours, e.g. c(\"#DEEBF7\", \"#08306B\").",
            call. = FALSE)
     }
-    # viridisLite applies begin/end itself
+    
     return(viridisLite::viridis(n, option = palette_option,
                                 begin = begin, end = end))
   }
@@ -1344,8 +1340,7 @@ plot_metric_vs_norm_publication <- function(
     metric = "bias",
     normalization = "Nh",
     max_m = NULL,
-    max_lag_norm = NULL,  # Drop every lag with ||h|| beyond this (e.g. 10) instead of zooming, so the free y scales follow the visible lags
-    best_m_only = FALSE,
+    max_lag_norm = NULL,  
     show_CH = FALSE,
     CH_color = "#E41A1C",
     naive_color = "black",
@@ -1353,30 +1348,30 @@ plot_metric_vs_norm_publication <- function(
     filename = NULL,
     width = 7,
     height = 6,
-    dpi = 600,  # High DPI for publication
+    dpi = 600,  
     base_size = 11,
-    font_scale = 1,  # Multiplier for all text sizes (axis labels, titles, legend, facet strips)
+    font_scale = 1,
     line_size = 0.6,
     point_size = 1.8,
-    show_points = TRUE,  # FALSE: lines only, no dot/triangle markers (legend keys become plain lines). Note that use_bw = TRUE with all m relies on the markers to tell the m-curves apart
-    m_points = TRUE,  # FALSE: markers only on Naive (dots) and CH (triangles), none on the m-curves - the readable choice when many m are drawn
-    m_line_size = NULL,  # Linewidth of the m-curves; NULL = line_size. Try ~0.35 for the all-m figures so the references stand out
-    m_point_size = NULL,  # Marker size of the m-curves; NULL = point_size
-    naive_point_size = NULL,  # Marker size of the Naive dots; NULL = point_size. ~1.0 keeps the curve from reading as a bead chain over ~50 lags
-    CH_point_size = NULL,  # Marker size of the Cressie-Hawkins triangles; NULL = point_size
-    m_show = NULL,  # Draw only these m values, e.g. c(1, 3, 5, 7, 9); NULL = all. Halving the number of curves is the single biggest legibility win
-    label_m_extremes = FALSE,  # Print "m=<lowest>" / "m=<highest>" at the right end of those two curves, so the ramp direction is readable off the panel instead of off a long legend. Ignored when best_m_only = TRUE
-    palette_begin = 0,  # Trim the palette: raise begin so no m-curve comes out near-black and collides with a black Naive
-    palette_end = 0.9,  # Lower end so no m-curve comes out near-white
-    use_bw = FALSE,  # Black & white friendly with shapes
-    show_title = FALSE,  # Often not needed in papers
+    show_points = TRUE,
+    m_points = TRUE,
+    m_line_size = NULL,
+    m_point_size = NULL,
+    naive_point_size = NULL,
+    CH_point_size = NULL,
+    m_show = NULL,
+    label_m_extremes = FALSE,
+    palette_begin = 0,
+    palette_end = 0.9,
+    use_bw = FALSE,
+    show_title = FALSE,
     legend_position = "right",
-    facet_ncol = 2,  # Number of facet columns; set to length(lambda_values) (e.g. 4) for a single row
-    legend_nrow = NULL,  # Rows for a bottom legend; NULL = auto. With many m's, keep small (e.g. 2) so it doesn't overflow a 1-row layout
-    palette_option = "viridis",  # Colours for the m-curves: a viridisLite name ("viridis", "magma", "inferno", "plasma", "cividis", "rocket", "mako", "turbo", or "A".."H"), a paletteer spec "package::palette" (e.g. "scico::berlin", needs the paletteer package), or a vector of colours to interpolate. Ignored when use_bw = TRUE
-    CH_clip_factor = 1.5,  # For MSE: drop CH points exceeding this factor times the naive value
-    stack_metrics = FALSE,  # TRUE: one figure with a row per metric (bias on top, MSE below) and a column per lambda. Overrides facet_ncol; `metric` may be a vector to choose/order the rows (default c("bias", "MSE"))
-    stack_independent_y = FALSE  # Only with stack_metrics: TRUE gives every panel its own y range; FALSE (default) shares the y range within each metric row
+    facet_ncol = 2,
+    legend_nrow = NULL,
+    palette_option = "viridis",
+    CH_clip_factor = 1.5,
+    stack_metrics = FALSE,
+    stack_independent_y = FALSE
 ) {
 
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
@@ -1774,9 +1769,26 @@ plot_mse_ratio_heatmap_grid <- function(
     palette_option = "diverging",
     palette_direction = 1,
     fixed_aspect = FALSE,
-    ncol = 2
+    ncol = 2,
+    value = c("ratio", "pct"),
+    axes_all = FALSE,
+    panel_axis_titles = FALSE
 ) {
-  
+  # value    "ratio" fills with MSEChatCorr / MSEChat, centred on 1 (the
+  #          historical behaviour). "pct" fills with the signed percent change
+  #          (ratio - 1) * 100, centred on 0, so a REDUCTION carries a minus
+  #          sign in the legend exactly as it already does in the cell labels.
+  # axes_all TRUE draws the h1 / h2 tick labels on every panel instead of only
+  #          on the outer margins.
+  # panel_axis_titles TRUE gives every panel its own "h1" / "h2" axis TITLES.
+  #          A facetted plot has one pair of titles for the whole figure, so
+  #          this builds one plot per lambda and lays them out with patchwork;
+  #          the result is a patchwork object, still printable and ggsave-able.
+  value <- match.arg(value)
+  if (panel_axis_titles && !requireNamespace("patchwork", quietly = TRUE))
+    stop("panel_axis_titles = TRUE needs the 'patchwork' package: ",
+         "install.packages(\"patchwork\").", call. = FALSE)
+
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
   
   # Construct column names
@@ -1867,69 +1879,44 @@ plot_mse_ratio_heatmap_grid <- function(
   if (is.null(filename)) {
     m_tag <- if (best_m_only) "bestm" else paste0("m", m_filter)
     norm_tag <- if (normalization == "N") "_N" else "_Nh"
-    filename <- sprintf("mse_ratio_heatmap_grid_%s%s_N%d.png", m_tag, norm_tag, N_filter)
+    val_tag <- if (value == "pct") "_pct" else ""
+    filename <- sprintf("mse_ratio_heatmap_grid_%s%s%s_N%d.png", m_tag, norm_tag,
+                        val_tag, N_filter)
   }
   
-  # Create plot
-  p <- ggplot2::ggplot(df_plot, ggplot2::aes(x = factor(h1), y = factor(h2), fill = mse_ratio)) +
-    ggplot2::geom_tile(color = "white", linewidth = 0.2)
-  
-  # Add text labels if show_numbers is TRUE
-  if (show_numbers) {
-    p <- p + ggplot2::geom_text(
-      ggplot2::aes(label = label, color = I(text_col)),
-      size = label_size
-    )
-  }
-  
-  # Add X marks for zero_better
-  if (nrow(df_cross) > 0) {
-    p <- p +
-      ggplot2::geom_segment(
-        data = df_cross,
-        ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4, 
-                     y = y_num - 0.4, yend = y_num + 0.4),
-        inherit.aes = FALSE, linewidth = 0.5, color = "black"
-      ) +
-      ggplot2::geom_segment(
-        data = df_cross,
-        ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4, 
-                     y = y_num + 0.4, yend = y_num - 0.4),
-        inherit.aes = FALSE, linewidth = 0.5, color = "black"
-      )
-  }
-  
-  p <- p + ggplot2::facet_wrap(~ lambda_label, ncol = ncol, labeller = ggplot2::label_parsed)
-  
-  # Add fill scale based on palette option
-  if (palette_option == "diverging") {
-    p <- p + ggplot2::scale_fill_gradient2(
-      low = "#2166AC",
-      mid = "#F7F7F7",
-      high = "#B2182B",
-      midpoint = 1,
-      limits = scale_limits,
-      name = "MSE Ratio",
-      na.value = "grey70",
-      oob = scales::squish
-    )
+  # The fill is the ratio or the signed percent change; the cell labels are the
+  # signed percent change either way.
+  fill_var <- if (value == "pct") "pct_change" else "mse_ratio"
+
+  # Fill scale: on the ratio scale the neutral point is 1, on the percent scale
+  # it is 0 and a reduction is negative. A fresh scale object per panel, so the
+  # per-lambda plots never share one.
+  if (value == "pct") {
+    fill_limits <- (scale_limits - 1) * 100
+    fill_mid    <- 0
+    fill_name   <- "MSE change (%)"
+    fill_labels <- function(x) sprintf("%+.0f%%", x)
   } else {
-    p <- p + ggplot2::scale_fill_viridis_c(
-      option = palette_option,
-      direction = palette_direction,
-      limits = scale_limits,
-      name = "MSE Ratio",
-      na.value = "grey70",
-      oob = scales::squish
-    )
+    fill_limits <- scale_limits
+    fill_mid    <- 1
+    fill_name   <- "MSE Ratio"
+    fill_labels <- ggplot2::waiver()
   }
-  
-  p <- p +
-    ggplot2::labs(
-      x = expression(h[1]),
-      y = expression(h[2])
-    ) +
-    ggplot2::theme_minimal(base_size = 11) +
+  fill_scale <- function() {
+    if (palette_option == "diverging") {
+      ggplot2::scale_fill_gradient2(
+        low = "#2166AC", mid = "#F7F7F7", high = "#B2182B",
+        midpoint = fill_mid, limits = fill_limits, labels = fill_labels,
+        name = fill_name, na.value = "grey70", oob = scales::squish)
+    } else {
+      ggplot2::scale_fill_viridis_c(
+        option = palette_option, direction = palette_direction,
+        limits = fill_limits, labels = fill_labels,
+        name = fill_name, na.value = "grey70", oob = scales::squish)
+    }
+  }
+
+  base_theme <- ggplot2::theme_minimal(base_size = 11) +
     ggplot2::theme(
       panel.grid = ggplot2::element_blank(),
       strip.background = ggplot2::element_blank(),
@@ -1940,12 +1927,58 @@ plot_mse_ratio_heatmap_grid <- function(
       axis.text = ggplot2::element_text(size = 9),
       panel.spacing = ggplot2::unit(1, "lines")
     )
-  
-  # Add coord_fixed only if requested
-  if (fixed_aspect) {
-    p <- p + ggplot2::coord_fixed()
+
+  # One heatmap, over whatever subset it is handed. Used for the whole grid
+  # (then facetted) and for a single lambda (then laid out by patchwork).
+  build_panel <- function(dat, cross_dat) {
+    q <- ggplot2::ggplot(dat, ggplot2::aes(x = factor(h1), y = factor(h2),
+                                           fill = .data[[fill_var]])) +
+      ggplot2::geom_tile(color = "white", linewidth = 0.2)
+    if (show_numbers) {
+      q <- q + ggplot2::geom_text(
+        ggplot2::aes(label = label, color = I(text_col)), size = label_size)
+    }
+    # X marks where the zero estimator beats the best available
+    if (nrow(cross_dat) > 0) {
+      q <- q +
+        ggplot2::geom_segment(
+          data = cross_dat,
+          ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4,
+                       y = y_num - 0.4, yend = y_num + 0.4),
+          inherit.aes = FALSE, linewidth = 0.5, color = "black") +
+        ggplot2::geom_segment(
+          data = cross_dat,
+          ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4,
+                       y = y_num + 0.4, yend = y_num - 0.4),
+          inherit.aes = FALSE, linewidth = 0.5, color = "black")
+    }
+    q <- q + fill_scale() +
+      ggplot2::labs(x = expression(h[1]), y = expression(h[2])) +
+      base_theme
+    if (fixed_aspect) q <- q + ggplot2::coord_fixed()
+    q
   }
-  
+
+  if (panel_axis_titles) {
+    # One plot per lambda, so each keeps its own h1 / h2 axis titles; the lambda
+    # label becomes the panel title and the shared legend is collected once.
+    lvls <- levels(droplevels(df_plot$lambda_label))
+    panels <- lapply(lvls, function(lv) {
+      build_panel(df_plot[df_plot$lambda_label == lv, , drop = FALSE],
+                  df_cross[df_cross$lambda_label == lv, , drop = FALSE]) +
+        ggplot2::ggtitle(parse(text = lv)[[1]]) +
+        ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5,
+                                                          size = 12))
+    })
+    p <- patchwork::wrap_plots(panels, ncol = ncol, guides = "collect")
+  } else {
+    # axes = "all" repeats the h1 / h2 tick labels (not titles) on every panel.
+    p <- build_panel(df_plot, df_cross) +
+      ggplot2::facet_wrap(~ lambda_label, ncol = ncol,
+                          labeller = ggplot2::label_parsed,
+                          axes = if (axes_all) "all" else "margins")
+  }
+
   # Save (PNG only -- this project never produces PDF plots)
   out_path_png <- file.path(out_dir, sub("\\.pdf$", ".png", filename))
 

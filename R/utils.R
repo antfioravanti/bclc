@@ -3,31 +3,28 @@
 # Basic utility functions for working with 2D lattice data
 #------------------------------------------------------------------------------
 
-
 #------------------------------------------------------------------------------
 # REVERSAL MATRIX
-#' Build the \eqn{n \times n} reversal matrix \eqn{\mathbf{J}} (anti-identity).
+#' Build the reversal matrix (anti-identity).
 #'
 #' The matrix has ones on the anti-diagonal and zeros elsewhere.
-#' Multiplication \eqn{\mathbf{J} x} reverses the entries of a vector \eqn{x}.
+#' Multiplication J*x reverses the entries of a vector x.
 #'
 #' @param n Integer. Dimension of the matrix.
-#' @return An \eqn{n \times n} numeric matrix representing the reversal operator.
+#' @return A matrix representing the reversal operator.
 Jmat <- function(n) {
   diag(n)[, n:1, drop = FALSE]
 }
 
-
 #------------------------------------------------------------------------------
 # POSITIVE SEMI DEFINITE CHECKER FOR A MATRIX
-#' Check Whether a Matrix Is Positive Semi-Definite
+#' Check if a matrix is positive semi-definite
 #'
 #' Returns `TRUE` when `M` is symmetric up to the specified tolerance and all
 #' eigenvalues are greater than or equal to `-tol`.
 #'
 #' @param M A numeric matrix.
 #' @param tol Numeric tolerance used for the symmetry check and eigenvalue test.
-#'
 #' @return A logical scalar.
 #' @export
 is_psd <- function(M, tol = 1e-8) {
@@ -80,14 +77,12 @@ get_lag_index <- function(nvec, hvec) {
   col0 * L1 + row0 + 1L
 }
 
-
 #------------------------------------------------------------------------------
 # CENTRAL BLOCK INDICES FOR TRUNCATION
 #' Get the vec-indices of the central (2m+1)^2 block within vec(Gamma).
 #'
-#' Used to extract the truncated lag window {-m,...,m}^2 from the full
-#' L1*L2 vectorised lag matrix.
-#'
+#' Used to extract the truncated lag window from the full L1*L2 vectorised  
+#' lag matrix.
 #' @param nvec  Grid size c(n1, n2).
 #' @param m     Truncation parameter.
 #' @return  Integer vector of 1-based indices into vec(Gamma).
@@ -106,17 +101,14 @@ slice_indices <- function(nvec, m) {
   as.vector(outer(rows, cols, FUN = function(r, c) (c - 1L) * L1 + r))
 }
 
-
 #------------------------------------------------------------------------------
 # LAG MATRIX PRINTER
 #' Print a visual table of all lag pairs (h1, h2) and optionally their
 #' vec-index, for a grid of size (n1, n2).
 #'
-#' This is a small helper for inspecting the lag layout of the full
-#' \eqn{(2n_1 - 1) \times (2n_2 - 1)} lag matrix. When `show_index = TRUE`,
-#' each cell also displays the corresponding 1-based index in R's
-#' column-major vectorization.
-#'
+#' This is a small helper for inspecting the lag layout of the full lag matrix.
+#' When `show_index = TRUE`, ach cell also displays the corresponding 
+#' 1-based indexe in R's column-major vectorization.
 #' @param n1 Integer. Number of rows in the lattice.
 #' @param n2 Integer. Number of columns in the lattice.
 #' @param show_index Logical. If `TRUE`, print the associated 1-based

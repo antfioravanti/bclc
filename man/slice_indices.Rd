@@ -15,6 +15,6 @@ slice_indices(nvec, m)
 Integer vector of 1-based indices into vec(Gamma).
 }
 \description{
-Used to extract the truncated lag window {-m,...,m}^2 from the full
-L1*L2 vectorised lag matrix.
+Used to extract the truncated lag window from the full L1*L2 vectorised
+lag matrix.
 }

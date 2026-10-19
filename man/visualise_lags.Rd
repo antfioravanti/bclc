@@ -20,8 +20,7 @@ Invisibly returns a character matrix containing the printed lag
 labels.
 }
 \description{
-This is a small helper for inspecting the lag layout of the full
-\eqn{(2n_1 - 1) \times (2n_2 - 1)} lag matrix. When \code{show_index = TRUE},
-each cell also displays the corresponding 1-based index in R's
-column-major vectorization.
+This is a small helper for inspecting the lag layout of the full lag matrix.
+When \code{show_index = TRUE}, ach cell also displays the corresponding
+1-based indexe in R's column-major vectorization.
 }

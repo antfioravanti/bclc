@@ -53,16 +53,16 @@ build_weights <- function(mat1, mat2, m1, m2 = -1L, Nh_normalize = TRUE) {
     .Call(`_bclc_build_weights`, mat1, mat2, m1, m2, Nh_normalize)
 }
 
-eval_true_cov <- function(hvec, beta, lambdas, alphas, sigma, model = "modexp", separable = FALSE, nu = 0.5, delta = 1.0) {
-    .Call(`_bclc_eval_true_cov`, hvec, beta, lambdas, alphas, sigma, model, separable, nu, delta)
+eval_true_cov <- function(hvec, beta, lambdas, alphas, sigma, model = "modexp", delta = 1.0) {
+    .Call(`_bclc_eval_true_cov`, hvec, beta, lambdas, alphas, sigma, model, delta)
 }
 
-build_true_Gamma <- function(nvec, beta, lambdas, alphas, sigma, model = "modexp", separable = FALSE, nu = 0.5, delta = 1.0) {
-    .Call(`_bclc_build_true_Gamma`, nvec, beta, lambdas, alphas, sigma, model, separable, nu, delta)
+build_true_Gamma <- function(nvec, beta, lambdas, alphas, sigma, model = "modexp", delta = 1.0) {
+    .Call(`_bclc_build_true_Gamma`, nvec, beta, lambdas, alphas, sigma, model, delta)
 }
 
-build_true_Sigma <- function(nvec, beta, lambdas, alphas, sigma, model = "modexp", separable = FALSE, nu = 0.5, delta = 1.0) {
-    .Call(`_bclc_build_true_Sigma`, nvec, beta, lambdas, alphas, sigma, model, separable, nu, delta)
+build_true_Sigma <- function(nvec, beta, lambdas, alphas, sigma, model = "modexp", delta = 1.0) {
+    .Call(`_bclc_build_true_Sigma`, nvec, beta, lambdas, alphas, sigma, model, delta)
 }
 
 cressiehawkins_semivariogram <- function(X, hvec, Nh_normalize = TRUE) {

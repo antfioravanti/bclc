@@ -8,50 +8,39 @@ n1 x n2 lattice.}
 simulate_lattice_process(
   n1,
   n2 = n1,
+  model = "modexp",
   sigma = 1,
   alpha1 = 1,
-  alpha2 = 1,
+  alpha2 = alpha1,
   lambda1 = 1,
-  lambda2 = 1,
+  lambda2 = lambda1,
   beta = 0,
-  seed = NULL,
-  model = "modexp",
-  separable = FALSE,
-  nu = 0.5,
   delta = 1,
+  seed = NULL,
   tol = 1e-06
 )
 }
 \arguments{
 \item{n1, n2}{Grid dimensions.}
 
+\item{model}{Covariance model: "modexp" (default) or "gencauchy".}
+
 \item{sigma}{Variance parameter (C(0,0) = sigma^2).}
 
-\item{alpha1, alpha2}{Smoothness parameters, in (0, 2].}
+\item{alpha1, alpha2}{Smoothness parameters, in (0, 2]. alpha2 defaults to
+alpha1.}
 
-\item{lambda1, lambda2}{Scale parameters (positive). Enters as
-|h|^alpha / lambda, so lambda absorbs the power: a classical Matern of
-range L is alpha = 2, lambda = L^2.}
+\item{lambda1, lambda2}{Range parameters (positive).
+lambda2 defaults to lambda1.}
 
-\item{beta}{Separability parameter of the non-separable form (>= 0);
-ignored when separable = TRUE.}
+\item{beta}{Separability parameter: beta = 0 gives the separable
+model, beta > 0 the non-separable one.}
+
+\item{delta}{Tail parameter (> 0), used when model = "gencauchy".}
 
 \item{seed}{Random seed for reproducibility (NULL = no seed).}
 
-\item{model}{Covariance model: "modexp" (default), "matern" or
-"gencauchy".}
-
-\item{separable}{If TRUE, C is the product of the two per-dimension
-covariances; if FALSE (default), the non-separable form coupled by beta.
-Both are positive definite by construction.}
-
-\item{nu}{Matern smoothness (> 0), used when model = "matern".}
-
-\item{delta}{Tail exponent (> 0), used when model = "gencauchy"; C decays
-as |h_k|^(-alpha_k * delta).}
-
-\item{tol}{Tolerance passed to MASS::mvrnorm. Smooth Matern fields on a
-fine lattice give a near-singular Sigma and may need this loosened.}
+\item{tol}{Tolerance passed to MASS::mvrnorm.}
 }
 \value{
 A list with components:

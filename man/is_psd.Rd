@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{is_psd}
 \alias{is_psd}
-\title{Check Whether a Matrix Is Positive Semi-Definite}
+\title{Check if a matrix is positive semi-definite}
 \usage{
 is_psd(M, tol = 1e-08)
 }

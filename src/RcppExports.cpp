@@ -185,8 +185,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // eval_true_cov
-double eval_true_cov(NumericVector hvec, double beta, NumericVector lambdas, NumericVector alphas, double sigma, std::string model, bool separable, double nu, double delta);
-RcppExport SEXP _bclc_eval_true_cov(SEXP hvecSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP modelSEXP, SEXP separableSEXP, SEXP nuSEXP, SEXP deltaSEXP) {
+double eval_true_cov(NumericVector hvec, double beta, NumericVector lambdas, NumericVector alphas, double sigma, std::string model, double delta);
+RcppExport SEXP _bclc_eval_true_cov(SEXP hvecSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP modelSEXP, SEXP deltaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -196,16 +196,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< bool >::type separable(separableSEXP);
-    Rcpp::traits::input_parameter< double >::type nu(nuSEXP);
     Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
-    rcpp_result_gen = Rcpp::wrap(eval_true_cov(hvec, beta, lambdas, alphas, sigma, model, separable, nu, delta));
+    rcpp_result_gen = Rcpp::wrap(eval_true_cov(hvec, beta, lambdas, alphas, sigma, model, delta));
     return rcpp_result_gen;
 END_RCPP
 }
 // build_true_Gamma
-NumericMatrix build_true_Gamma(NumericVector nvec, double beta, NumericVector lambdas, NumericVector alphas, double sigma, std::string model, bool separable, double nu, double delta);
-RcppExport SEXP _bclc_build_true_Gamma(SEXP nvecSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP modelSEXP, SEXP separableSEXP, SEXP nuSEXP, SEXP deltaSEXP) {
+NumericMatrix build_true_Gamma(NumericVector nvec, double beta, NumericVector lambdas, NumericVector alphas, double sigma, std::string model, double delta);
+RcppExport SEXP _bclc_build_true_Gamma(SEXP nvecSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP modelSEXP, SEXP deltaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -215,16 +213,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< bool >::type separable(separableSEXP);
-    Rcpp::traits::input_parameter< double >::type nu(nuSEXP);
     Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_true_Gamma(nvec, beta, lambdas, alphas, sigma, model, separable, nu, delta));
+    rcpp_result_gen = Rcpp::wrap(build_true_Gamma(nvec, beta, lambdas, alphas, sigma, model, delta));
     return rcpp_result_gen;
 END_RCPP
 }
 // build_true_Sigma
-NumericMatrix build_true_Sigma(NumericVector nvec, double beta, NumericVector lambdas, NumericVector alphas, double sigma, std::string model, bool separable, double nu, double delta);
-RcppExport SEXP _bclc_build_true_Sigma(SEXP nvecSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP modelSEXP, SEXP separableSEXP, SEXP nuSEXP, SEXP deltaSEXP) {
+NumericMatrix build_true_Sigma(NumericVector nvec, double beta, NumericVector lambdas, NumericVector alphas, double sigma, std::string model, double delta);
+RcppExport SEXP _bclc_build_true_Sigma(SEXP nvecSEXP, SEXP betaSEXP, SEXP lambdasSEXP, SEXP alphasSEXP, SEXP sigmaSEXP, SEXP modelSEXP, SEXP deltaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -234,10 +230,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type alphas(alphasSEXP);
     Rcpp::traits::input_parameter< double >::type sigma(sigmaSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< bool >::type separable(separableSEXP);
-    Rcpp::traits::input_parameter< double >::type nu(nuSEXP);
     Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
-    rcpp_result_gen = Rcpp::wrap(build_true_Sigma(nvec, beta, lambdas, alphas, sigma, model, separable, nu, delta));
+    rcpp_result_gen = Rcpp::wrap(build_true_Sigma(nvec, beta, lambdas, alphas, sigma, model, delta));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -341,9 +335,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_bclc_build_Pmc", (DL_FUNC) &_bclc_build_Pmc, 2},
     {"_bclc_build_Sm", (DL_FUNC) &_bclc_build_Sm, 4},
     {"_bclc_build_weights", (DL_FUNC) &_bclc_build_weights, 5},
-    {"_bclc_eval_true_cov", (DL_FUNC) &_bclc_eval_true_cov, 9},
-    {"_bclc_build_true_Gamma", (DL_FUNC) &_bclc_build_true_Gamma, 9},
-    {"_bclc_build_true_Sigma", (DL_FUNC) &_bclc_build_true_Sigma, 9},
+    {"_bclc_eval_true_cov", (DL_FUNC) &_bclc_eval_true_cov, 7},
+    {"_bclc_build_true_Gamma", (DL_FUNC) &_bclc_build_true_Gamma, 7},
+    {"_bclc_build_true_Sigma", (DL_FUNC) &_bclc_build_true_Sigma, 7},
     {"_bclc_cressiehawkins_semivariogram", (DL_FUNC) &_bclc_cressiehawkins_semivariogram, 3},
     {"_bclc_cressiehawkins_cov", (DL_FUNC) &_bclc_cressiehawkins_cov, 3},
     {"_bclc_naive_sample_cov", (DL_FUNC) &_bclc_naive_sample_cov, 3},

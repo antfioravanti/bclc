@@ -26,6 +26,8 @@ double naive_sample_cov(NumericMatrix X, NumericVector hvec,
 //   X: n1 x n2 data matrix.
 //   hvec: lag vector (h1, h2).
 //   Nh_normalize: if true, normalise by N_h; if false, normalise by N = n1 * n2.
+// Returns:
+//  Chat(h)
 
   if (hvec.size() != 2)
     stop("hvec must have length 2");
@@ -64,13 +66,18 @@ double naive_sample_cov(NumericMatrix X, NumericVector hvec,
   return cov_value / (Nh_normalize ? Nh : N);
 }
 //-----------------------------------------------------------------------------
-// FULL EMPIRICAL GAMMA (n1-1) x (n2-1) MATRIX OF SAMPLE COVARIANCES
+// Sample Gamma Matrix (n1-1) x (n2-1)
 //-----------------------------------------------------------------------------
 
-// Build the L1 x L2 matrix Gamma_hat(h1, h2) for all lags from data X.
+// Build the L1 x L2 matrix Gamma_hat(h1, h2) from data X.
 // [[Rcpp::export]]
 NumericMatrix build_Gamma_naive(NumericMatrix X,
                                 bool Nh_normalize = true) {
+ // Parameters:
+ //   X:              Observed Lattice Data (n1 x n2).
+ //   Nh_normalized:  (bool) Nh or N normalization (default Nh). 
+ // Returns:
+ //   Gamma hat                            
 
   int n1 = X.nrow();
   int n2 = X.ncol();
@@ -98,11 +105,15 @@ NumericMatrix build_Gamma_naive(NumericMatrix X,
   return Gamma_hat;
 }
 //-----------------------------------------------------------------------------
-// NAIVE SIGMA_HAT: N x N covariance matrix from the empirical lag matrix.
-// Build the N x N variance covariance matrix Sigma_hat
-
+// Sample Sigma hat matrix N x N
+//-----------------------------------------------------------------------------
 // [[Rcpp::export]]
 NumericMatrix build_Sigma_naive(NumericMatrix X, bool Nh_normalize = true) {
+   // Parameters:
+ //   X:              Observed Lattice Data (n1 x n2).
+ //   Nh_normalized:  (bool) Nh or N normalization (default Nh). 
+ // Returns:
+ //   Sigma hat  
 
   int n1 = X.nrow();
   int n2 = X.ncol();

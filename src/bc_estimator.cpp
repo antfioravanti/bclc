@@ -62,7 +62,8 @@ static NumericVector pick_estimator(List fit, std::string which) {
 // by flooring all negative eigenvalues to zero
 // Parameters:
 //   M: numeric symmetric matrix.
-// Returns the nearest PSD matrix.
+// Returns:
+//   the nearest PSD matrix.
 // [[Rcpp::export]]
 arma::mat psd_project(arma::mat M) {
   arma::mat M_sym = 0.5 * (M + M.t());
@@ -145,21 +146,18 @@ List bias_corrected_estimator(NumericMatrix X, int m1, int m2 = -1,
 //-----------------------------------------------------------------------------
 // fit_lattice_cov() = select_m() + bias_corrected_estimator()
 //-----------------------------------------------------------------------------
-// One-call automatic fit: pick the cut-off with select_m() and run
-// bias_corrected_estimator() at it. The cut-off is ALWAYS data-driven -- there
-// is deliberately no manual m argument here; to set m1/m2 by hand, call
-// bias_corrected_estimator() directly.
+// One-call automatic fit: data-driven selection of the cut-off m with
+// bias_corrected_estimator() with the selected m.
 // Parameters:
 //   X:            n1 x n2 data matrix.
-//   method:       forwarded to select_m() ("rule" or "cv").
-//   pooled:       forwarded to select_m() (single pooled cut-off for both axes;
-//                 with method = "cv" this is also what makes the search cheap).
-//   kappa, eta:   forwarded to select_m() (tuning constants of the rule).
-//   K:            forwarded to select_m() (correlogram lags used in the WLS fit).
-//   cv_grid, cv_block, cv_shift, cv_nugget: forwarded to select_m(), used only
-//                 when method = "cv".
+//   method:       "rule" or "cv".
+//   pooled:       single pooled cut-off for both axes (both methods).
+//   kappa, eta:   tuning constants only for method = "rule".
+//   K:            correlogram lags only for method = "rule".
+//   cv_grid, cv_block, cv_shift, cv_nugget: only for method = "cv".
 //   Nh_normalize: forwarded to both select_m() and bias_corrected_estimator().
-// Returns the bias_corrected_estimator() fit with the select_m() list appended
+// Returns:
+//   the bias_corrected_estimator() fit with the select_m() list appended
 // as m_selection, recording how the cut-off was reached.
 // [[Rcpp::export]]
 List fit_lattice_cov(NumericMatrix X,
@@ -187,7 +185,7 @@ List fit_lattice_cov(NumericMatrix X,
 }
 
 //-----------------------------------------------------------------------------
-// LAG MATRIX from a bias_corrected_estimator() FIT
+// LAG MATRIX from a bias_corrected_estimator() or fit_lattice_cov()
 //-----------------------------------------------------------------------------
 //
 // Reshape a truncated lag vector of a bias_corrected_estimator() fit into the
@@ -209,11 +207,11 @@ NumericMatrix fit_to_Gamma(List fit, std::string which = "corrected") {
 }
 
 //-----------------------------------------------------------------------------
-// SIGMA MATRIX from a bias_corrected_estimator() FIT
+// SIGMA MATRIX from a bias_corrected_estimator() or fit_lattice_cov()
 //-----------------------------------------------------------------------------
 //
 // Builds the plug-in Sigma hat covariance from a bias_corrected_estimator()
-// fit.
+// or fit_lattice_cov() fit.
 // Parameters:
 //   fit:   output list of bias_corrected_estimator().
 //   which: "corrected" (default) -> Chat_star_m (bias-corrected);
@@ -223,7 +221,7 @@ NumericMatrix fit_to_Gamma(List fit, std::string which = "corrected") {
 // Returns:
 //   Sigma_hat_m : field covariance where Sigma_hat_m[s,t] = C(s1-t1, s2-t2),
 //                 spatial locations in column-major order, 0 outside the
-//                 {-m1..m1} x {-m2..m2} window;
+//                 selection window;
 //   psd_applied : the psd argument reported back, so a caller holding only the
 //                 result can tell which of the two it has.
 
@@ -236,11 +234,10 @@ List fit_to_Sigma(List fit, std::string which = "corrected", bool psd = true) {
   int n1 = as<int>(fit["n1"]);
   int n2 = as<int>(fit["n2"]);
 
-  // Lag matrix (rows = h1, cols = h2), shared reshape helper.
+  // Lag matrix (rows = h1, cols = h2)
   NumericMatrix Gamma_hat_corr_m = lagvec_to_matrix(Chat, m1, m2);
 
   // N x N field covariance, column-major spatial indexing over the n1 x n2
-  // lattice; 0 outside the {-m1..m1} x {-m2..m2} lag window.
   int N = n1 * n2;
   NumericMatrix Sigma_hat_m(N, N);
 

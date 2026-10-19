@@ -21,8 +21,7 @@ using namespace Rcpp;
 double cressiehawkins_semivariogram(NumericMatrix X, NumericVector hvec,
                                     bool Nh_normalize = true) {
   // Model: 
-  // sv_CH(h) = [mean(|X(t+h) - X(t)|^{1/2})]^4 / (2 * (0.457 + 0.494/N_h)).
-  //                                  
+  // sv_CH(h) = [mean(|X(t+h) - X(t)|^{1/2})]^4 / (2 * (0.457 + 0.494/N_h)).                                  
 
   if (hvec.size() != 2)
     stop("hvec must have length 2");

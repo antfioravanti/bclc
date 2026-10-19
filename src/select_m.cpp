@@ -19,22 +19,18 @@
 using namespace Rcpp;
 
 //-----------------------------------------------------------------------------
-// WLS FIT OF THE RANGE FROM A CORRELOGRAM
+// WLS Fit for the lambda parameter (method = "rule")
 //-----------------------------------------------------------------------------
 // Fit lambda in the exponential correlogram rho(h) = exp(-h / lambda) by
 // weighted least squares through the origin on the log scale:
 //
 //   log rho(h) = -(1 / lambda) * h,      h = 1, ..., K
 //   1 / lambda_hat = - sum_h w_h * h * log rho(h) / sum_h w_h * h^2
-//
-// with weights w_h proportional to the number of contributing pairs along the
-// axis, w_h = n_k - h, so that short (better estimated) lags dominate. Lags with
-// a non-positive or non-finite correlation are dropped (log undefined); if none
-// survives, or the fitted slope is non-positive, NA is returned.
-//
 // Parameters:
 //   rho: correlogram values rho(1), ..., rho(K).
 //   n_k: axis length (only used to build the weights).
+// Returns:
+//   lambda hat
 static double fit_lambda_wls(const std::vector<double>& rho, int n_k) {
 
   double num = 0.0, den = 0.0;
@@ -51,7 +47,7 @@ static double fit_lambda_wls(const std::vector<double>& rho, int n_k) {
     den += w * h * h;
     ++used;
   }
-  // if no usable lags or the fitted slope is non-positive, return NA
+  // if no usable lags, return NA
   if (used == 0 || den <= 0.0) return NA_REAL;
   // fitted slope = -1 / lambda_hat
   double inv_lambda = -num / den;   
@@ -63,30 +59,22 @@ static double fit_lambda_wls(const std::vector<double>& rho, int n_k) {
 }
 
 //-----------------------------------------------------------------------------
-// BLOCK-HOLDOUT KRIGING CROSS-VALIDATION  (method = "cv")
+// Block Hold Out Cross Validation  (method = "cv")
 //-----------------------------------------------------------------------------
-// The cut-off is scored by how well the covariance it produces PREDICTS. For a
-// candidate m: estimate Sigma_hat_m on the whole lattice, then hide a square
-// block of sites, ordinary-krige them from the surrounding ring, and take the
-// RMSE. Averaging over a few shifted blocks gives the CV score; argmin wins.
+// The cut-off is scored by how well the covariance it predicts on the held out
+// sites. 
+// For a candidate m: 1) estimate Sigma_hat_m on the whole lattice, 
+//                    2) hide a square block of sites,
+//                    3) ordinary-krige them from the surrounding sites
+//                    4) take the RMSE.
+//                    5) average over a few shifted blocks to get the CV score.
+// The selected m is the one with the smallest CV score.
 //
 // The folds are the central block and four copies of it shifted by +-`shift`
 // along both axes, so the scored blocks sit in slightly different parts of the
 // field without ever leaving the lattice.
-//
-// Cost: each fold solves a dense (N - b^2) system, N = n1*n2, so the CV is
-// O(|grid| * N^3) -- much heavier than the plug-in rule. Shrink cv_block or the
-// grid on large lattices.
-
-// One fold: the held-out block with top-left corner (r1, c1) and the ring around
-// it, as 0-based column-major site indices into the n1 x n2 lattice.
-
-// define the data structure named CvFold that contains two members: 
-// pred and obs, both of type arma::uvec (Armadillo’s vector of unsigned 
-// integer indices.)
 struct CvFold { arma::uvec pred, obs; };
 
-// ----
 static CvFold make_fold(int n1, int n2, int r1, int c1, int b1, int b2) {
   // Splits a n1 x n2 lattice into a held-out block (pred) and the surrounding 
   // ring (obs), returning the column-major indices of the two sets.
@@ -113,11 +101,10 @@ static CvFold make_fold(int n1, int n2, int r1, int c1, int b1, int b2) {
   f.obs  = arma::uvec(obs);
   return f;
 }
-// ----
 
 
 static std::vector<CvFold> build_cv_folds(int n1, int n2, int b, int shift) {
-// It creates up to five square held-out blocks for cross-validation
+// It creates up to 5 square held-out blocks for cross-validation
     // n1, n2: lattice dimensions
     // b: block size (square) 
     // shift: diagonal offset of the four non-central folds
@@ -185,13 +172,13 @@ static double cv_score_m(NumericMatrix X, int m1, int m2,
 }
 
 //-----------------------------------------------------------------------------
-// DATA-DRIVEN SELECTION OF THE TRUNCATION CUT-OFF
+// Data driven selection of the cut-off parameter m.
 //-----------------------------------------------------------------------------
 // Select the truncation cut-off from the naive correlograms along the two
 // coordinate axes and the grid size:
 //
 //   c0        = Chat(0,0)
-//   rho_k(h)  = Chat(h * e_k) / c0        (e_1 = (1,0), e_2 = (0,1)); k = 1, 2
+//   rho_k(h)  = Chat(h * e_k) / c0    (e_1 = (1,0), e_2 = (0,1)); k = 1, 2
 //   lambda_hat_k = WLS fit of rho_k(h) = exp(-h / lambda) over h = 1, ..., K
 //   m_k       = round( kappa * (n_k * lambda_hat_k)^eta )
 //
@@ -199,32 +186,41 @@ static double cv_score_m(NumericMatrix X, int m1, int m2,
 // rho(h) = (rho_1(h) + rho_2(h)) / 2 and n = min(n1, n2), and m1 = m2 = m.
 //
 // method = "cv" ignores all of the above and instead picks the cut-off that
-// minimises the block-holdout kriging CV score (see the section above). With
-// pooled = true only m1 = m2 is scanned (|grid| fits); with pooled = false the
-// full m1 x m2 grid is scanned (|grid|^2 fits, and each fit is O(N^3)).
-//
+// minimises the block-holdout kriging CV score (see the section above). 
+
 // Parameters:
 //   X:            n1 x n2 data matrix.
-//   method:       "rule" -> the plug-in rule - fitted exponential correlogram;
-//                 "cv"   -> block-holdout kriging CV.
-//   pooled:       pool the two axes into a single cut-off m1 = m2 (see above).
-//   kappa, eta:   tuning constants of the rule ("rule" only).
-//   K:            number of correlogram lags used in the WLS fit ("rule" only);
-//                 if < 0 (the default) K = max(1, floor(min(n1, n2) / 2)). Per
-//                 axis K is capped at n_k - 1.
+//   method:       "rule"  the plug-in rule: fitted exponential correlogram.
+//                 "cv"    block-holdout kriging CV.
+//   pooled:       pool the two axes into a single cut-off m1 = m2
+//   kappa, eta:   tuning constants of the rule (rule only).
+//   K:            number of correlogram lags used in the WLS fit (rule only);
+//                 if < 0 (the default) K = max(1, floor(min(n1, n2) / 2)).
 //   m_max:        if >= 0, cap each m_k at min(m_max, n_k - 2); if < 0, ignore.
 //   Nh_normalize: passed through to naive_sample_cov().
 //   cv_grid:      candidate cut-offs scanned by the CV; empty (the default)
 //                 means 1 ... min(min(n1,n2) / 2, upper cap).
 //   cv_block:     side of the held-out square block; < 0 (the default) means
-//                 max(2, min(n1, n2) / 3).
+//                 max(2, min(n1, n2) / 3). Capped at min(n1, n2) - 1.
 //   cv_shift:     diagonal offset of the four non-central folds, in sites.
 //   cv_nugget:    relative jitter added to the kriging system's diagonal.
-// Returns a list recording how the cut-off was reached. Always: m1, m2, n1, n2
-// (int), pooled (bool), method (string). For "rule" additionally rho1, rho2 (the
-// lag-one correlations), rho1_curve, rho2_curve, lambda1_hat, lambda2_hat, K,
-// kappa, eta. For "cv" additionally cv_grid, cv_score (a vector when pooled, a
-// |grid| x |grid| matrix of m1 by m2 scores otherwise), cv_block, cv_shift.
+// Returns a list recording how the cut-off was reached:
+//   m1, m2:       the selected cut-offs (int).
+//   n1, n2:       the grid dimensions (int).
+//   pooled:       whether the axes were pooled (bool).
+//   method:       rule or cv (string).
+//   rho1, rho2:   the lag-one correlations (rule only).
+//   rho1_curve,
+//   rho2_curve:   the correlograms used in the fit (rule only).
+//   lambda1_hat,
+//   lambda2_hat:  the fitted ranges (rule only).
+//   K, kappa, eta: the tuning values used (rule only).
+//   cv_grid:      the candidate cut-offs scanned (cv only).
+//   cv_score:     the CV scores; a vector when pooled, otherwise a
+//                 |grid| x |grid| matrix of m1 by m2 (cv only).
+//   cv_block,
+//   cv_shift:     the block side and fold offset used (cv only).
+//   n_folds:      the number of distinct held-out blocks (cv only).
 // [[Rcpp::export]]
 List select_m(NumericMatrix X,
               std::string method = "rule",
@@ -250,14 +246,14 @@ List select_m(NumericMatrix X,
          "exists (need n2 - 2 >= 1).", n2);
 
   if (method != "rule" && method != "cv")
-    stop("select_m: method must be \"rule\" (alias \"param\") or \"cv\".");
+    stop("select_m: method must be \"rule\" or \"cv\".");
 
   //---------------------------------------------------------------------------
   // method = "cv": block-holdout kriging cross-validation
   //---------------------------------------------------------------------------
   if (method == "cv") {
     
-    // upper limit of admissimble m cut-off 
+    // upper limit of admissible m cut-off 
     int upper = (m_max >= 0) ? std::min(m_max, std::min(n1, n2) - 2)
                              : std::min(n1, n2) - 2;
 
@@ -267,8 +263,8 @@ List select_m(NumericMatrix X,
       for (int m = 1; m <= std::min(std::min(n1, n2) / 2, upper); ++m)
       // push_back is a method of std::vector that appends an element to the
       // end of the vector - does not modify an existing entry; 
-      // it increases the vector length by one and appends
-        grid.push_back(m); // add m at the end of the vector grid
+      // it increases the vector length (!!!) by one and appends
+        grid.push_back(m); // add m at the end of the vector grid !!
     } else {
       for (int i = 0; i < cv_grid.size(); ++i)
         if (cv_grid[i] >= 1 && cv_grid[i] <= upper) grid.push_back(cv_grid[i]);
@@ -278,8 +274,8 @@ List select_m(NumericMatrix X,
            "[1, %d]; widen cv_grid or relax m_max.", upper);
 
     int b = (cv_block >= 0) ? cv_block : std::max(2, std::min(n1, n2) / 3);
-    b = std::min(b, std::min(n1, n2) - 1);           // leave a ring to krige from
-    if (b < 1) stop("select_m: cv_block must leave at least one ring site.");
+    b = std::min(b, std::min(n1, n2) - 1);  // leave some obs to krige from
+    if (b < 1) stop("select_m: cv_block must leave at least some sites.");
 
     std::vector<CvFold> folds = build_cv_folds(n1, n2, b, cv_shift);
     arma::vec y = arma::vectorise(as<arma::mat>(X));  // column-major, as Sigma

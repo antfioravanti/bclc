@@ -1,6 +1,6 @@
 #------------------------------------------------------------------------------
 # Author: Antonio Fioravanti
-# Result heatmaps and line plots over a summary_df keyed by (N, lambda, m, h1, h2).
+# Result heatmaps and line plots over a summary_df keyed by N, lambda, m, h1, h2.
 #------------------------------------------------------------------------------
 
 # Needed packages:
@@ -1143,15 +1143,13 @@ plot_metric_vs_norm_grid <- function(summary_df,
 }
 
 #------------------------------------------------------------------------------
-# Publication-grade metric vs lag norm (faceted by lambda)
+# grade metric vs lag norm 
 #------------------------------------------------------------------------------
 
 # Colours for the ordered m-family. `palette_option` may be
 #   * a viridisLite option name ("viridis", "magma", ..., or "A".."H"),
 #   * a paletteer spec "package::palette" (e.g. "scico::berlin",
-#     "wesanderson::Zissou1"), which needs the paletteer package installed, or
-#   * a vector of colours to interpolate between (no extra dependency).
-# begin/end trim the light and dark ends of the ramp for every source alike.
+#     "wesanderson::Zissou1"), 
 .m_palette <- function(palette_option, n, begin = 0, end = 1) {
   if (n < 1) return(character(0))
 
@@ -1165,8 +1163,7 @@ plot_metric_vs_norm_grid <- function(summary_df,
            "instead, e.g. palette_option = c(\"#2166AC\", \"#B2182B\").",
            call. = FALSE)
     }
-    # Continuous palettes first; fall back to discrete ones (paletteer errors when
-    # a spec is not of the requested kind)
+
     ramp <- tryCatch(
       as.character(paletteer::paletteer_c(palette_option, n = 256)),
       error = function(e) tryCatch(
@@ -1179,8 +1176,7 @@ plot_metric_vs_norm_grid <- function(summary_df,
       )
     )
   } else {
-    # viridisLite only warns and silently falls back to "viridis" for an unknown
-    # option, which quietly ignores the palette that was asked for
+
     known <- c("magma", "inferno", "plasma", "viridis", "cividis",
                "rocket", "mako", "turbo", LETTERS[1:8])
     if (!palette_option %in% known) {
@@ -1192,7 +1188,7 @@ plot_metric_vs_norm_grid <- function(summary_df,
            "\".\n  Or pass a vector of colours, e.g. c(\"#DEEBF7\", \"#08306B\").",
            call. = FALSE)
     }
-    # viridisLite applies begin/end itself
+    
     return(viridisLite::viridis(n, option = palette_option,
                                 begin = begin, end = end))
   }
@@ -1344,8 +1340,7 @@ plot_metric_vs_norm_publication <- function(
     metric = "bias",
     normalization = "Nh",
     max_m = NULL,
-    max_lag_norm = NULL,  # Drop every lag with ||h|| beyond this (e.g. 10) instead of zooming, so the free y scales follow the visible lags
-    best_m_only = FALSE,
+    max_lag_norm = NULL,  
     show_CH = FALSE,
     CH_color = "#E41A1C",
     naive_color = "black",
@@ -1353,7 +1348,7 @@ plot_metric_vs_norm_publication <- function(
     filename = NULL,
     width = 7,
     height = 6,
-    dpi = 600,  # High DPI for publication
+    dpi = 600,  
     base_size = 11,
     font_scale = 1,  # Multiplier for all text sizes (axis labels, titles, legend, facet strips)
     line_size = 0.6,
@@ -1551,8 +1546,7 @@ plot_metric_vs_norm_publication <- function(
     names(shapes) <- all_levels
   }
   
-  # Panel columns: lambda values when stacking metrics, facet_ncol otherwise.
-  # When stacking, the metric names label the rows, so the y axis title is dropped.
+
   n_facet_cols <- if (stack_metrics) length(lambda_values) else facet_ncol
   y_axis_label <- if (stack_metrics) NULL else y_label
 
@@ -1562,18 +1556,13 @@ plot_metric_vs_norm_publication <- function(
     shapes[setdiff(all_levels, c("Naïve", "CH"))] <- NA
   }
 
-  # Split the series into the ordered m-family and the two reference estimators, so
-  # the references can be drawn last (on top) with their own weight and markers
-  # instead of being buried under a dozen overlapping m-curves.
+
   ref_levels <- intersect(c("CH", "Naïve"), all_levels)   # CH first, Naïve on top
   df_family <- df_combined %>% dplyr::filter(!estimator %in% ref_levels)
   df_CH     <- df_combined %>% dplyr::filter(estimator == "CH")
   df_naive  <- df_combined %>% dplyr::filter(estimator == "Naïve")
 
-  # Direct labels for the lowest and highest m curves, in the left margin. With an
-  # ordered family, reading "which line is which" off the curve beats matching a
-  # colour against a nine-entry legend. The left edge (lag norm 0) is where the
-  # family fans out furthest, so labels there collide least.
+
   df_label <- NULL
   if (label_m_extremes && !best_m_only && nrow(df_family) &&
       any(!is.na(df_family$m))) {
@@ -1592,25 +1581,21 @@ plot_metric_vs_norm_publication <- function(
                                color = estimator,
                                linetype = estimator,
                                shape = estimator)) +
-    # m-family: thin lines, optional (small) markers. ggplot2 >= 3.5 draws legend
-    # keys per layer, so each key ends up showing exactly its own curve's weight.
+
     geom_line(data = df_family, aes(group = estimator), linewidth = m_line_size) +
     (if (show_points && m_points)
       geom_point(data = df_family, size = m_point_size) else NULL) +
-    # Reference estimators, each its own layer so line weight and marker size are
-    # tunable per series. CH first, Naive last, so Naive ends up on top.
+
     (if (nrow(df_CH)) geom_line(data = df_CH, linewidth = line_size) else NULL) +
     (if (show_points && nrow(df_CH))
       geom_point(data = df_CH, size = CH_point_size) else NULL) +
     geom_line(data = df_naive, linewidth = line_size) +
     (if (show_points) geom_point(data = df_naive, size = naive_point_size) else NULL) +
-    # Direct labels on the outermost m-curves, just left of the panel content
     (if (!is.null(df_label))
       geom_text(data = df_label, aes(label = paste0("m=", m)),
                 hjust = 1.15, vjust = 0.4, show.legend = FALSE,
                 size = (base_size - 3) * font_scale / .pt) else NULL) +
-    # Scales. `breaks` pins the legend order to Naive -> m ... -> CH; without it the
-    # keys would follow the layer order above (family first) instead.
+
     scale_color_manual(values = colors, breaks = all_levels, name = "Estimator") +
     scale_linetype_manual(values = linetypes, breaks = all_levels, name = "Estimator") +
     scale_shape_manual(values = shapes, breaks = all_levels, name = "Estimator") +
@@ -1657,13 +1642,11 @@ plot_metric_vs_norm_publication <- function(
   # Facets with parsed labels (for Greek lambda)
   if (stack_metrics) {
     if (stack_independent_y) {
-      # facet_wrap over metric x lambda: every panel gets its own y range, at the
-      # price of repeating the metric name in each panel strip
+
       p <- p + facet_wrap(~ metric_label + lambda_label, ncol = n_facet_cols,
                           scales = "free_y", labeller = label_parsed)
     } else {
-      # facet_grid: metric rows, lambda columns. The row strip sits on the left of
-      # the axis and so reads as the y-axis title; the y range is shared within a row.
+
       p <- p + facet_grid(metric_label ~ lambda_label, scales = "free_y",
                           switch = "y",
                           labeller = labeller(lambda_label = label_parsed,
@@ -1701,9 +1684,6 @@ plot_metric_vs_norm_publication <- function(
 
   # Adjust legend layout based on position
   if (legend_position == "bottom") {
-    # A single row overflows when many m-levels are shown (e.g. all m plus
-    # Naïve/CH on a 4-panel-wide layout). Wrap the legend over several rows so
-    # it stays within the figure width. Aim for ~ (#facets + 1) entries per row.
     if (!is.null(legend_nrow)) {
       n_rows <- legend_nrow
     } else {
@@ -1774,9 +1754,17 @@ plot_mse_ratio_heatmap_grid <- function(
     palette_option = "diverging",
     palette_direction = 1,
     fixed_aspect = FALSE,
-    ncol = 2
+    ncol = 2,
+    value = c("ratio", "pct"),
+    axes_all = FALSE,
+    panel_axis_titles = FALSE
 ) {
-  
+
+  value <- match.arg(value)
+  if (panel_axis_titles && !requireNamespace("patchwork", quietly = TRUE))
+    stop("panel_axis_titles = TRUE needs the 'patchwork' package: ",
+         "install.packages(\"patchwork\").", call. = FALSE)
+
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
   
   # Construct column names
@@ -1867,69 +1855,40 @@ plot_mse_ratio_heatmap_grid <- function(
   if (is.null(filename)) {
     m_tag <- if (best_m_only) "bestm" else paste0("m", m_filter)
     norm_tag <- if (normalization == "N") "_N" else "_Nh"
-    filename <- sprintf("mse_ratio_heatmap_grid_%s%s_N%d.png", m_tag, norm_tag, N_filter)
+    val_tag <- if (value == "pct") "_pct" else ""
+    filename <- sprintf("mse_ratio_heatmap_grid_%s%s%s_N%d.png", m_tag, norm_tag,
+                        val_tag, N_filter)
   }
   
-  # Create plot
-  p <- ggplot2::ggplot(df_plot, ggplot2::aes(x = factor(h1), y = factor(h2), fill = mse_ratio)) +
-    ggplot2::geom_tile(color = "white", linewidth = 0.2)
-  
-  # Add text labels if show_numbers is TRUE
-  if (show_numbers) {
-    p <- p + ggplot2::geom_text(
-      ggplot2::aes(label = label, color = I(text_col)),
-      size = label_size
-    )
-  }
-  
-  # Add X marks for zero_better
-  if (nrow(df_cross) > 0) {
-    p <- p +
-      ggplot2::geom_segment(
-        data = df_cross,
-        ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4, 
-                     y = y_num - 0.4, yend = y_num + 0.4),
-        inherit.aes = FALSE, linewidth = 0.5, color = "black"
-      ) +
-      ggplot2::geom_segment(
-        data = df_cross,
-        ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4, 
-                     y = y_num + 0.4, yend = y_num - 0.4),
-        inherit.aes = FALSE, linewidth = 0.5, color = "black"
-      )
-  }
-  
-  p <- p + ggplot2::facet_wrap(~ lambda_label, ncol = ncol, labeller = ggplot2::label_parsed)
-  
-  # Add fill scale based on palette option
-  if (palette_option == "diverging") {
-    p <- p + ggplot2::scale_fill_gradient2(
-      low = "#2166AC",
-      mid = "#F7F7F7",
-      high = "#B2182B",
-      midpoint = 1,
-      limits = scale_limits,
-      name = "MSE Ratio",
-      na.value = "grey70",
-      oob = scales::squish
-    )
+  fill_var <- if (value == "pct") "pct_change" else "mse_ratio"
+
+
+  if (value == "pct") {
+    fill_limits <- (scale_limits - 1) * 100
+    fill_mid    <- 0
+    fill_name   <- "MSE change (%)"
+    fill_labels <- function(x) sprintf("%+.0f%%", x)
   } else {
-    p <- p + ggplot2::scale_fill_viridis_c(
-      option = palette_option,
-      direction = palette_direction,
-      limits = scale_limits,
-      name = "MSE Ratio",
-      na.value = "grey70",
-      oob = scales::squish
-    )
+    fill_limits <- scale_limits
+    fill_mid    <- 1
+    fill_name   <- "MSE Ratio"
+    fill_labels <- ggplot2::waiver()
   }
-  
-  p <- p +
-    ggplot2::labs(
-      x = expression(h[1]),
-      y = expression(h[2])
-    ) +
-    ggplot2::theme_minimal(base_size = 11) +
+  fill_scale <- function() {
+    if (palette_option == "diverging") {
+      ggplot2::scale_fill_gradient2(
+        low = "#2166AC", mid = "#F7F7F7", high = "#B2182B",
+        midpoint = fill_mid, limits = fill_limits, labels = fill_labels,
+        name = fill_name, na.value = "grey70", oob = scales::squish)
+    } else {
+      ggplot2::scale_fill_viridis_c(
+        option = palette_option, direction = palette_direction,
+        limits = fill_limits, labels = fill_labels,
+        name = fill_name, na.value = "grey70", oob = scales::squish)
+    }
+  }
+
+  base_theme <- ggplot2::theme_minimal(base_size = 11) +
     ggplot2::theme(
       panel.grid = ggplot2::element_blank(),
       strip.background = ggplot2::element_blank(),
@@ -1940,13 +1899,56 @@ plot_mse_ratio_heatmap_grid <- function(
       axis.text = ggplot2::element_text(size = 9),
       panel.spacing = ggplot2::unit(1, "lines")
     )
-  
-  # Add coord_fixed only if requested
-  if (fixed_aspect) {
-    p <- p + ggplot2::coord_fixed()
+
+
+  build_panel <- function(dat, cross_dat) {
+    q <- ggplot2::ggplot(dat, ggplot2::aes(x = factor(h1), y = factor(h2),
+                                           fill = .data[[fill_var]])) +
+      ggplot2::geom_tile(color = "white", linewidth = 0.2)
+    if (show_numbers) {
+      q <- q + ggplot2::geom_text(
+        ggplot2::aes(label = label, color = I(text_col)), size = label_size)
+    }
+    # X marks where the zero estimator beats the best available
+    if (nrow(cross_dat) > 0) {
+      q <- q +
+        ggplot2::geom_segment(
+          data = cross_dat,
+          ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4,
+                       y = y_num - 0.4, yend = y_num + 0.4),
+          inherit.aes = FALSE, linewidth = 0.5, color = "black") +
+        ggplot2::geom_segment(
+          data = cross_dat,
+          ggplot2::aes(x = x_num - 0.4, xend = x_num + 0.4,
+                       y = y_num + 0.4, yend = y_num - 0.4),
+          inherit.aes = FALSE, linewidth = 0.5, color = "black")
+    }
+    q <- q + fill_scale() +
+      ggplot2::labs(x = expression(h[1]), y = expression(h[2])) +
+      base_theme
+    if (fixed_aspect) q <- q + ggplot2::coord_fixed()
+    q
   }
-  
-  # Save (PNG only -- this project never produces PDF plots)
+
+  if (panel_axis_titles) {
+
+    lvls <- levels(droplevels(df_plot$lambda_label))
+    panels <- lapply(lvls, function(lv) {
+      build_panel(df_plot[df_plot$lambda_label == lv, , drop = FALSE],
+                  df_cross[df_cross$lambda_label == lv, , drop = FALSE]) +
+        ggplot2::ggtitle(parse(text = lv)[[1]]) +
+        ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5,
+                                                          size = 12))
+    })
+    p <- patchwork::wrap_plots(panels, ncol = ncol, guides = "collect")
+  } else {
+
+    p <- build_panel(df_plot, df_cross) +
+      ggplot2::facet_wrap(~ lambda_label, ncol = ncol,
+                          labeller = ggplot2::label_parsed,
+                          axes = if (axes_all) "all" else "margins")
+  }
+
   out_path_png <- file.path(out_dir, sub("\\.pdf$", ".png", filename))
 
   ggplot2::ggsave(out_path_png, plot = p, width = width, height = height, dpi = dpi, bg = "white")
@@ -1975,8 +1977,6 @@ plot_best_m_heatmap <- function(summary_df,
                                 palette_direction = -1,
                                 show_legend = TRUE,
                                 tick_every = NULL) {
-  # tick_every: show axis labels every N lags (NULL = auto based on grid size).
-  #             Always shows the extreme lags and zero.
   
   norm_type <- match.arg(normalization)
   
@@ -2012,7 +2012,7 @@ plot_best_m_heatmap <- function(summary_df,
   }
   out_path <- file.path(out_dir, filename)
   
-  # Check MSEZeroEst column exists
+
   if (!mse_zero_col %in% names(df_lam)) {
     warning(sprintf("Column '%s' not found; X overlay will be skipped.", mse_zero_col))
     df_lam[[mse_zero_col]] <- NA
@@ -2020,10 +2020,10 @@ plot_best_m_heatmap <- function(summary_df,
   
   grid_hh <- df_lam %>% dplyr::distinct(h1, h2)
   
-  # Filter to rows where correction reduces MSE
+
   df_reduced <- df_lam %>% dplyr::filter(.data[[mse_reduced_col]])
   
-  # Find best m (smallest MSE of corrected estimator) per (h1, h2)
+
   df_best <- df_reduced %>%
     dplyr::group_by(h1, h2) %>%
     dplyr::arrange(.data[[mse_corr_col]], .data$m, .by_group = TRUE) %>%
@@ -2035,7 +2035,6 @@ plot_best_m_heatmap <- function(summary_df,
       best_MSE = .data[[mse_corr_col]]
     )
   
-  # For each (h1, h2): get the naive MSE and zero MSE (constant across m, take first)
   df_ref <- df_lam %>%
     dplyr::group_by(h1, h2) %>%
     dplyr::slice(1) %>%
@@ -2050,10 +2049,7 @@ plot_best_m_heatmap <- function(summary_df,
     dplyr::left_join(df_best, by = c("h1", "h2")) %>%
     dplyr::left_join(df_ref, by = c("h1", "h2"))
   
-  # Determine the "best available" MSE per cell:
-  #   - If correction helped: min(best_MSE, naive_MSE)  (best_MSE should be < naive)
-  #   - If no correction helped (grey): naive_MSE
-  # Then X-mark if zero_MSE < best_available
+
   df_plot <- df_plot %>%
     dplyr::mutate(
       best_available_MSE = dplyr::if_else(

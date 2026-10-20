@@ -1,11 +1,13 @@
 Package: bclc
 Title: Bias-Corrected Lattice Covariance Estimation
-Version: 0.7.0
+Version: 0.8.0
 Authors@R:
     person("Antonio", "Fioravanti", , "antoniofioravanti4@gmail.com", role = c("aut", "cre"))
 Description: Bias-corrected estimation of sample covariance functions on
     two-dimensional rectangular lattices using weight matrices and analytical
     mean squared error formulas under the modified exponential covariance model.
+    Simulation supports separable and non-separable modified exponential,
+    generalized Cauchy and Gneiting-type covariance models.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

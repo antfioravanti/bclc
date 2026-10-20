@@ -21,15 +21,20 @@ generate_grid <- function(n1, n2 = n1) {
 #' n1 x n2 lattice.
 #'
 #' @param n1,n2   Grid dimensions.
-#' @param model    Covariance model: "modexp" (default) or "gencauchy".
+#' @param model    Covariance model: "modexp" (default), "gencauchy",
+#'   "modexp2", "gencauchy2" or "gneiting" (see src/covariance.cpp). In the
+#'   last three the margins do not depend on beta.
 #' @param sigma    Variance parameter (C(0,0) = sigma^2).
 #' @param alpha1,alpha2  Smoothness parameters, in (0, 2]. alpha2 defaults to
 #'   alpha1.
 #' @param lambda1,lambda2  Range parameters (positive). 
 #'   lambda2 defaults to lambda1.
 #' @param beta     Separability parameter: beta = 0 gives the separable
-#'   model, beta > 0 the non-separable one.
-#' @param delta    Tail parameter (> 0), used when model = "gencauchy".
+#'   model, beta > 0 the non-separable one. Must be in [0, 1] for "modexp2",
+#'   "gencauchy2" and "gneiting".
+#' @param delta    Tail parameter (> 0), used by "gencauchy", "gencauchy2"
+#'   (requires alpha1 == alpha2; long memory for every beta iff delta <= 1)
+#'   and "gneiting" (tau; requires delta >= beta/2).
 #' @param seed     Random seed for reproducibility (NULL = no seed).
 #' @param tol      Tolerance passed to MASS::mvrnorm.
 #' @return  A list with components:

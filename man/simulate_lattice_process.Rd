@@ -23,7 +23,9 @@ simulate_lattice_process(
 \arguments{
 \item{n1, n2}{Grid dimensions.}
 
-\item{model}{Covariance model: "modexp" (default) or "gencauchy".}
+\item{model}{Covariance model: "modexp" (default), "gencauchy",
+"modexp2", "gencauchy2" or "gneiting" (see src/covariance.cpp). In the
+last three the margins do not depend on beta.}
 
 \item{sigma}{Variance parameter (C(0,0) = sigma^2).}
 
@@ -34,9 +36,12 @@ alpha1.}
 lambda2 defaults to lambda1.}
 
 \item{beta}{Separability parameter: beta = 0 gives the separable
-model, beta > 0 the non-separable one.}
+model, beta > 0 the non-separable one. Must be in [0, 1] for "modexp2",
+"gencauchy2" and "gneiting".}
 
-\item{delta}{Tail parameter (> 0), used when model = "gencauchy".}
+\item{delta}{Tail parameter (> 0), used by "gencauchy", "gencauchy2"
+(requires alpha1 == alpha2; long memory for every beta iff delta <= 1)
+and "gneiting" (tau; requires delta >= beta/2).}
 
 \item{seed}{Random seed for reproducibility (NULL = no seed).}
 

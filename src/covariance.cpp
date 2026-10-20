@@ -1,25 +1,52 @@
 //-----------------------------------------------------------------------------
 // Author: Antonio Fioravanti
-// True autocovariance models, selected by model = "modexp" | "gencauchy"
+// True autocovariance models, selected by
+//   model = "modexp" | "gencauchy"                       
+//         | "modexp2" | "gencauchy2" | "gneiting"  
 // Reference: https://rdrr.io/cran/geoR/man/cov.spatial.html
 //
 //   d1  = (|h1| / lambda1)^alpha1,   d2 = (|h2| / lambda2)^alpha2
-//   d12 = (|h1 - h2| / sqrt(lambda1 * lambda2))^min(alpha1, alpha2)
 //
+//   d12 = (|h1 - h2| / sqrt(lambda1 * lambda2))^min(alpha1, alpha2)
 //   modexp     beta = 0:  C = sigma^2 * exp(-d1) * exp(-d2)
 //              beta > 0:  C = sigma^2 * exp(-(d1 + d2 + beta * d12))
 //   gencauchy  beta = 0:  C = sigma^2 * (1 + d1)^(-delta/alpha1) * (1 + d2)^(-delta/alpha2)
 //              beta > 0:  C = sigma^2 * (1 + d1 + d2 + beta * d12)^(-delta/ahar)
-//              abar = 2 * alpha1 * alpha2 / (alpha1 + alpha2)   (harmonic mean)
+//   NOTE: in these models beta also changes the margins and breaks axial
+//   symmetry, so beta is NOT a pure separability parameter.
+//
+//  NEW MODELS:
+//   Margins C(h1,0), C(0,h2) do not depend on beta; beta = 0 is separable.
+//   Dq  = (d1^q + d2^q)^(1/q),  q = 2 / max(alpha1, alpha2)
+//   modexp2     C = sigma^2 * exp(-[(1-beta)(d1 + d2) + beta * Dq])
+//   gencauchy2  C = sigma^2 * [(1+d1)(1+d2)]^(-(1-beta) nu) * (1+Dq)^(-beta nu),
+//                  nu = delta/alpha, requires alpha1 == alpha2;
+//                  short memory iff delta*(2-beta) > 2 (beta couples memory);
+//                  long memory for all beta in [0,1] iff delta <= 1
+//   gneiting       Gneiting (2002), adapted to spatial only
+//                  C = sigma^2 * (1 + d2)^(-delta) * exp(-d1 / (1 + d2)^(beta*alpha1/2))
+//                  adapted such that Gneiting's:
+//                  c = lambda1^(-alpha1)
+//                  a = lambda2^(-alpha2),
+//                  tau = delta.
+//                  alpha_G = alpha2/2,
+//                  gamma_G = alpha1/2, 
+//                  Requires:
+//                   delta > 0 and delta >= beta/2;
+//                  short memory iff alpha2*(delta-beta/2) > 1.
+//                  Calibrated to old modexp (lambda): 
+//                  alphas = (1, 2),  lambdas = (lambda, lambda), delta = 1.5.
+//
 //   where:
 //   lambda: range parameter (0, inf)
-//   alpha:  smoothness (or shape) parameter (0,2]
-//   beta.   separability parameter beta=0 (separable) vs beta >0 (nonseparable)
-//   delta: (gencauchy only) long memory (0,inf). Long memory for <=1.
+//   alpha:  shape parameter (0, 2]
+//   beta:   separability parameter (old: [0, inf), new: [0, 1]); 0 = separable
+//   delta:  gencauchy: tail exponent (0, inf); gneiting: tau
 //-----------------------------------------------------------------------------
 
 #include <Rcpp.h>
 #include <cmath>
+#include <cctype>      // std::tolower (needed for portable package builds)
 #include <string>
 #include <algorithm>
 using namespace Rcpp;
@@ -27,14 +54,20 @@ using namespace Rcpp;
 //-----------------------------------------------------------------------------
 // Model id and parameter bundle
 //-----------------------------------------------------------------------------
-enum CovModel { COV_MODEXP = 0, COV_GENCAUCHY = 1 };
+enum CovModel {
+  COV_MODEXP        = 0,   // legacy
+  COV_GENCAUCHY     = 1,   // legacy (not used in paper)
+  COV_MODEXP2       = 2,   // NEW v0.8.0
+  COV_GENCAUCHY2    = 3,   // NEW v0.8.0
+  COV_GNEITING      = 4    // NEW v0.8.0
+};
 
 struct CovParams {
   double beta      = 0.0;
   double lambda1   = 1.0, lambda2 = 1.0;
   double alpha1    = 1.0, alpha2  = 1.0;
   double sigma     = 1.0;
-  double delta     = 1.0;   // gencauchy only
+  double delta     = 1.0;   // gencauchy*: tail exponent; gneiting: tau
   int    model     = COV_MODEXP;
 };
 
@@ -42,10 +75,13 @@ static int parse_cov_model(std::string s) {
   // convert string into lower case
   std::transform(s.begin(), s.end(), s.begin(),
                  [](unsigned char c) { return std::tolower(c); });
-  if (s == "modexp")    return COV_MODEXP;
-  if (s == "gencauchy") return COV_GENCAUCHY;
-  stop("unknown covariance model '" + s +
-       "'; expected \"modexp\" or \"gencauchy\"");
+  if (s == "modexp")        return COV_MODEXP;
+  if (s == "gencauchy")     return COV_GENCAUCHY;
+  if (s == "modexp2")    return COV_MODEXP2;      // NEW
+  if (s == "gencauchy2") return COV_GENCAUCHY2;   // NEW
+  if (s == "gneiting")      return COV_GNEITING;        // NEW
+  stop("unknown covariance model '" + s + "'; expected \"modexp\", "
+       "\"gencauchy\", \"modexp2\", \"gencauchy2\" or \"gneiting\"");
   return COV_MODEXP; // never reached
 }
 
@@ -56,8 +92,38 @@ static void validate_cov_params(const CovParams& p) {
     stop("alphas must be in (0, 2] for positive-definiteness");
   if (p.beta < 0.0)
     stop("beta must be >= 0");
-  if (p.model == COV_GENCAUCHY && p.delta <= 0.0)
-    stop("delta must be > 0 for the gencauchy model");
+  if ((p.model == COV_GENCAUCHY || p.model == COV_GENCAUCHY2 ||
+       p.model == COV_GNEITING) && p.delta <= 0.0)
+    stop("delta must be > 0 for the gencauchy and gneiting models");
+
+  // ---- NEW: checks for the paper-2 models ----
+  const bool new_model = (p.model == COV_MODEXP2 ||
+                          p.model == COV_GENCAUCHY2 ||
+                          p.model == COV_GNEITING);
+  if (new_model && p.beta > 1.0)
+    stop("beta must be in [0, 1] for modexp2, gencauchy2 and gneiting");
+
+  if ((p.model == COV_MODEXP2 || p.model == COV_GENCAUCHY2) &&
+      p.beta > 0.0 && std::max(p.alpha1, p.alpha2) >= 2.0)
+    Rcpp::warning("max(alpha) = 2: q = 1, so Dq = d1 + d2 and beta has no "
+                  "effect (the model reduces to the separable one)");
+
+  if (p.model == COV_GENCAUCHY2) {
+    if (p.alpha1 != p.alpha2)
+      stop("gencauchy2 requires alpha1 == alpha2");
+    if (p.delta > 1.0)
+      Rcpp::warning("gencauchy2: beta also couples the memory: short memory iff "
+                    "delta*(2-beta) > 2. Use delta <= 1 for long memory at every "
+                    "beta in [0, 1] (separable and non-separable alike)");
+  }
+
+  if (p.model == COV_GNEITING) {
+    if (p.delta < p.beta / 2.0)
+      stop("gneiting requires tau (= delta) >= beta/2");
+    if (p.alpha2 * (p.delta - p.beta / 2.0) <= 1.0)
+      Rcpp::warning("gneiting: alpha2*(tau - beta/2) <= 1, covariance not "
+                    "summable (long memory); e.g. use alphas = (1, 2), delta = 1.5");
+  }
 }
 
 // R arguments -> validated parameter bundle
@@ -91,31 +157,57 @@ static double true_cov(double h1, double h2, const CovParams& p) {
   double d1 = std::pow(std::abs(h1) / p.lambda1, p.alpha1);
   double d2 = std::pow(std::abs(h2) / p.lambda2, p.alpha2);
 
-  // coupling term, only used when beta > 0
-  double a12 = std::min(p.alpha1, p.alpha2);
-  double d12 = std::pow(std::abs(h1 - h2) / std::sqrt(p.lambda1 * p.lambda2), a12);
+  // ---------------- paper 1 models (unchanged) ----------------
+  if (p.model == COV_MODEXP || p.model == COV_GENCAUCHY) {
+    // coupling term, only used when beta > 0
+    double a12 = std::min(p.alpha1, p.alpha2);
+    double d12 = std::pow(std::abs(h1 - h2) / std::sqrt(p.lambda1 * p.lambda2), a12);
 
-  if (p.model == COV_MODEXP) {
-    if (p.beta == 0.0) {
-      // separable
-      return sigma2 * std::exp(-d1) * std::exp(-d2);
+    if (p.model == COV_MODEXP) {
+      if (p.beta == 0.0) {
+        // separable
+        return sigma2 * std::exp(-d1) * std::exp(-d2);
+      } else {
+        // non-separable
+        return sigma2 * std::exp(-(d1 + d2 + p.beta * d12));
+      }
     } else {
-      // non-separable
-      return sigma2 * std::exp(-(d1 + d2 + p.beta * d12));
-    }
-  } else if (p.model == COV_GENCAUCHY) {
-    if (p.beta == 0.0) {
-      // separable: each dimension with its own alpha
-      return sigma2 * std::pow(1.0 + d1, -p.delta / p.alpha1)
-                    * std::pow(1.0 + d2, -p.delta / p.alpha2);
-    } else {
-      // non-separable: harmonic mean of the alphas in the exponent
-      double ahar = 2.0 * p.alpha1 * p.alpha2 / (p.alpha1 + p.alpha2);
-      return sigma2 * std::pow(1.0 + d1 + d2 + p.beta * d12, -p.delta / ahar);
+      if (p.beta == 0.0) {
+        // separable: each dimension with its own alpha
+        return sigma2 * std::pow(1.0 + d1, -p.delta / p.alpha1)
+                      * std::pow(1.0 + d2, -p.delta / p.alpha2);
+      } else {
+        // non-separable: harmonic mean of the alphas in the exponent
+        double ahar = 2.0 * p.alpha1 * p.alpha2 / (p.alpha1 + p.alpha2);
+        return sigma2 * std::pow(1.0 + d1 + d2 + p.beta * d12, -p.delta / ahar);
+      }
     }
   }
 
-  // Potentially extend to other covariances from 
+  // ---------------- NEW: paper 2 models ----------------
+  if (p.model == COV_MODEXP2 || p.model == COV_GENCAUCHY2) {
+    // non-additive variogram with the same margins as d1 + d2
+    const double q  = 2.0 / std::max(p.alpha1, p.alpha2);          // q >= 1
+    const double Dq = std::pow(std::pow(d1, q) + std::pow(d2, q), 1.0 / q);
+
+    if (p.model == COV_MODEXP2) {
+      return sigma2 * std::exp(-((1.0 - p.beta) * (d1 + d2) + p.beta * Dq));
+    } else {
+      const double nu = p.delta / p.alpha1;                          // alpha1 == alpha2
+      return sigma2 * std::pow((1.0 + d1) * (1.0 + d2), -(1.0 - p.beta) * nu)
+                    * std::pow(1.0 + Dq, -p.beta * nu);
+    }
+  }
+
+  if (p.model == COV_GNEITING) {
+    // Gneiting (2002): psi = 1 + a|h2|^(2 alpha_G) = 1 + d2,
+    // c|h1|^(2 gamma_G) = d1, exponent beta*gamma_G = beta*alpha1/2, tau = delta
+    const double psi = 1.0 + d2;
+    return sigma2 * std::pow(psi, -p.delta)
+                  * std::exp(-d1 / std::pow(psi, 0.5 * p.beta * p.alpha1));
+  }
+
+  // Potentially extend to other covariances from
   //  https://rdrr.io/cran/geoR/man/cov.spatial.html
   return NA_REAL;
 }
@@ -133,7 +225,7 @@ double eval_true_cov(NumericVector hvec,
                      std::string model = "modexp",
                      double delta = 1.0) {
 // Evaluates the true covariance at the lag vector hvec = (h1, h2) under the
-// model selected by `model`: "modexp" or "gencauchy".
+// model selected by `model` (see header).
   if (hvec.size() != 2)
     stop("hvec must have length 2");
 
@@ -154,7 +246,7 @@ NumericMatrix build_true_Gamma(NumericVector nvec,
                                std::string model = "modexp",
                                double delta = 1.0) {
 // Builds the (2*n1-1) x (2*n2-1) matrix Gamma(h1, h2) for all lags h1, h2.
-// Rows indexed by h1; Columns by h2 
+// Rows indexed by h1; Columns by h2
   if (nvec.size() != 2)
     stop("nvec must have length 2");
 
@@ -189,7 +281,7 @@ NumericMatrix build_true_Gamma(NumericVector nvec,
 //-----------------------------------------------------------------------------
 
 // N x N covariance matrix (N = n1*n2) for the regular lattice.
-//   Sites ordered column-major 
+//   Sites ordered column-major
 
 // [[Rcpp::export]]
 NumericMatrix build_true_Sigma(NumericVector nvec,
